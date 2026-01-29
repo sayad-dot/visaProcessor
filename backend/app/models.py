@@ -1,0 +1,326 @@
+"""
+Database models for visa application system
+"""
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON, ForeignKey, Enum
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from datetime import datetime
+import enum
+
+from app.database import Base
+
+
+class ApplicationStatus(str, enum.Enum):
+    """Application processing status"""
+    DRAFT = "draft"
+    DOCUMENTS_UPLOADED = "documents_uploaded"
+    ANALYZING = "analyzing"
+    GENERATING = "generating"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class DocumentType(str, enum.Enum):
+    """Types of documents in the system"""
+    # User provided documents
+    PASSPORT_COPY = "passport_copy"
+    NID_BANGLA = "nid_bangla"
+    VISA_HISTORY = "visa_history"
+    TIN_CERTIFICATE = "tin_certificate"
+    INCOME_TAX_3YEARS = "income_tax_3years"
+    ASSET_VALUATION = "asset_valuation"
+    HOTEL_BOOKING = "hotel_booking"
+    AIR_TICKET = "air_ticket"
+    BANK_SOLVENCY = "bank_solvency"
+    
+    # System generated documents
+    NID_ENGLISH = "nid_english"
+    VISITING_CARD = "visiting_card"
+    COVER_LETTER = "cover_letter"
+    TRAVEL_ITINERARY = "travel_itinerary"
+    TRAVEL_HISTORY = "travel_history"
+    HOME_TIE_STATEMENT = "home_tie_statement"
+    FINANCIAL_STATEMENT = "financial_statement"
+
+
+class VisaApplication(Base):
+    """Main visa application model"""
+    __tablename__ = "visa_applications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    application_number = Column(String(50), unique=True, index=True, nullable=False)
+    
+    # User information
+    applicant_name = Column(String(200))
+    applicant_email = Column(String(200))
+    applicant_phone = Column(String(20))
+    
+    # Visa details
+    country = Column(String(100), nullable=False, default="Iceland")
+    visa_type = Column(String(100), nullable=False, default="Tourist")
+    
+    # Application status
+    status = Column(Enum(ApplicationStatus), default=ApplicationStatus.DRAFT)
+    
+    # Extracted information (JSON field for flexibility)
+    extracted_data = Column(JSON, default={})
+    
+    # Missing information tracking
+    missing_info = Column(JSON, default=[])
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    documents = relationship("Document", back_populates="application", cascade="all, delete-orphan")
+    ai_interactions = relationship("AIInteraction", back_populates="application", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<VisaApplication {self.application_number} - {self.status}>"
+
+
+class Document(Base):
+    """Document model for uploaded and generated files"""
+    __tablename__ = "documents"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
+    
+    # Document details
+    document_type = Column(Enum(DocumentType), nullable=False)
+    document_name = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_size = Column(Integer)  # in bytes
+    mime_type = Column(String(100))
+    
+    # Document status
+    is_uploaded = Column(Boolean, default=True)  # False for generated docs
+    is_processed = Column(Boolean, default=False)
+    is_required = Column(Boolean, default=True)
+    
+    # Extracted content (for AI processing)
+    extracted_text = Column(Text, nullable=True)
+    extracted_data = Column(JSON, default={})
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    processed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    application = relationship("VisaApplication", back_populates="documents")
+    
+    def __repr__(self):
+        return f"<Document {self.document_type} - {self.document_name}>"
+
+
+class AIInteraction(Base):
+    """Track AI interactions for analysis and generation"""
+    __tablename__ = "ai_interactions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
+    
+    # Interaction details
+    interaction_type = Column(String(50))  # 'analysis', 'generation', 'question'
+    prompt = Column(Text)
+    response = Column(Text)
+    
+    # Metadata
+    model_used = Column(String(100))
+    tokens_used = Column(Integer, nullable=True)
+    processing_time = Column(Integer, nullable=True)  # in milliseconds
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    application = relationship("VisaApplication", back_populates="ai_interactions")
+    
+    def __repr__(self):
+        return f"<AIInteraction {self.interaction_type} - {self.created_at}>"
+
+
+class RequiredDocument(Base):
+    """Master list of required documents per country/visa type"""
+    __tablename__ = "required_documents"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    country = Column(String(100), nullable=False)
+    visa_type = Column(String(100), nullable=False)
+    document_type = Column(Enum(DocumentType), nullable=False)
+    
+    # Document metadata
+    is_mandatory = Column(Boolean, default=True)
+    description = Column(Text)
+    can_be_generated = Column(Boolean, default=False)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    def __repr__(self):
+        return f"<RequiredDocument {self.country} - {self.visa_type} - {self.document_type}>"
+
+
+class ExtractedData(Base):
+    """Store structured data extracted from uploaded documents using AI"""
+    __tablename__ = "extracted_data"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    document_type = Column(Enum(DocumentType), nullable=False)
+    
+    # Structured extracted information (JSON for flexibility)
+    data = Column(JSON, default={})
+    
+    # Extraction metadata
+    confidence_score = Column(Integer, default=0)  # 0-100 percentage
+    extraction_model = Column(String(100), default="gemini-1.5-flash")
+    
+    # Timestamps
+    extracted_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    application = relationship("VisaApplication")
+    document = relationship("Document")
+    
+    def __repr__(self):
+        return f"<ExtractedData App#{self.application_id} - {self.document_type}>"
+
+
+class QuestionCategory(str, enum.Enum):
+    """Categories of questionnaire questions"""
+    PERSONAL = "personal"
+    EMPLOYMENT = "employment"
+    BUSINESS = "business"
+    TRAVEL_PURPOSE = "travel_purpose"
+    FINANCIAL = "financial"
+    ASSETS = "assets"
+    HOME_TIES = "home_ties"
+
+
+class QuestionDataType(str, enum.Enum):
+    """Data types for question responses"""
+    TEXT = "text"
+    TEXTAREA = "textarea"
+    NUMBER = "number"
+    DATE = "date"
+    SELECT = "select"
+    MULTISELECT = "multiselect"
+    BOOLEAN = "boolean"
+
+
+class QuestionnaireResponse(Base):
+    """Store user's responses to questionnaire questions"""
+    __tablename__ = "questionnaire_responses"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
+    
+    # Question details
+    category = Column(Enum(QuestionCategory), nullable=False)
+    question_key = Column(String(200), nullable=False)  # Unique identifier like 'employment.job_title'
+    question_text = Column(Text, nullable=False)  # Actual question displayed to user
+    
+    # Response
+    answer = Column(Text)
+    data_type = Column(Enum(QuestionDataType), default=QuestionDataType.TEXT)
+    
+    # Options for select/multiselect questions
+    options = Column(JSON)  # List of options if applicable
+    
+    # Metadata
+    is_required = Column(Boolean, default=True)
+    answered_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    application = relationship("VisaApplication")
+    
+    def __repr__(self):
+        return f"<QuestionnaireResponse App#{self.application_id} - {self.question_key}>"
+
+
+class AnalysisStatus(str, enum.Enum):
+    """Status of document analysis session"""
+    PENDING = "pending"
+    STARTED = "started"
+    ANALYZING = "analyzing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class AnalysisSession(Base):
+    """Track document analysis sessions"""
+    __tablename__ = "analysis_sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
+    
+    # Analysis status
+    status = Column(Enum(AnalysisStatus), default=AnalysisStatus.PENDING)
+    documents_analyzed = Column(Integer, default=0)
+    total_documents = Column(Integer, default=0)
+    current_document = Column(String(200))  # Currently analyzing document
+    
+    # Results
+    completeness_score = Column(Integer, default=0)  # 0-100 percentage
+    missing_fields = Column(JSON, default=[])  # List of missing information
+    
+    # Timestamps
+    started_at = Column(DateTime(timezone=True))
+    completed_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Error handling
+    error_message = Column(Text)
+    
+    # Relationships
+    application = relationship("VisaApplication")
+    
+    def __repr__(self):
+        return f"<AnalysisSession App#{self.application_id} - {self.status}>"
+
+
+class GenerationStatus(str, enum.Enum):
+    """Status of document generation"""
+    PENDING = "pending"
+    GENERATING = "generating"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class GeneratedDocument(Base):
+    """Track AI-generated documents"""
+    __tablename__ = "generated_documents"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
+    
+    # Document details
+    document_type = Column(String(100), nullable=False)  # cover_letter, nid_english, etc.
+    file_name = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_size = Column(Integer)  # in bytes
+    
+    # Generation status
+    status = Column(Enum(GenerationStatus), default=GenerationStatus.PENDING, index=True)
+    generation_progress = Column(Integer, default=0)  # 0-100 percentage
+    error_message = Column(Text)
+    
+    # Metadata
+    generation_metadata = Column(JSON, default={})  # Store generation details, data sources, etc.
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    completed_at = Column(DateTime(timezone=True))
+    
+    # Relationships
+    application = relationship("VisaApplication")
+    
+    def __repr__(self):
+        return f"<GeneratedDocument App#{self.application_id} - {self.document_type}>"
