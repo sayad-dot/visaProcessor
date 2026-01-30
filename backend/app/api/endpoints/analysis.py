@@ -203,6 +203,14 @@ async def get_analysis_status(
 ):
     """Get current status of document analysis"""
     
+    # First check if application exists
+    application = db.query(VisaApplication).filter(VisaApplication.id == application_id).first()
+    if not application:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application not found"
+        )
+    
     # Get most recent session
     session = db.query(AnalysisSession).filter(
         AnalysisSession.application_id == application_id
@@ -211,7 +219,7 @@ async def get_analysis_status(
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No analysis session found"
+            detail="No analysis session found for this application"
         )
     
     progress_percentage = 0

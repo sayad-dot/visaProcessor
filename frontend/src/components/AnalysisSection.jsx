@@ -60,7 +60,7 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
       if (response.ok) {
         const data = await response.json();
         setAnalysisStatus(data);
-        
+
         // If completed, fetch results
         if (data.status === 'completed') {
           fetchAnalysisResults();
@@ -69,10 +69,18 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
         else if (data.status === 'analyzing' || data.status === 'started') {
           startPolling();
         }
+      } else if (response.status === 404) {
+        const errorData = await response.json();
+        // Check if it's "No analysis session found" (normal) vs application not found (error)
+        if (errorData.detail && errorData.detail.includes('Application not found')) {
+          setError('Application not found. Please check the application ID.');
+          console.error('Application not found:', applicationId);
+        }
+        // Otherwise, silently handle - no analysis exists yet (this is normal)
       }
-      // Silently handle 404 - no analysis exists yet
     } catch (err) {
-      // No existing analysis, that's fine - don't log error
+      // Network error or other issues - silently handle
+      console.error('Error checking analysis status:', err);
     }
   };
 
@@ -92,7 +100,7 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
 
       const data = await response.json();
       setAnalysisStatus(data);
-      
+
       // Start polling for status updates
       startPolling();
     } catch (err) {
@@ -208,10 +216,10 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
         {isInProgress && (
           <Box>
             {/* Animated Header */}
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'space-between',
                 mb: 3,
                 p: 2,
@@ -221,15 +229,15 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CircularProgress 
-                  size={40} 
+                <CircularProgress
+                  size={40}
                   thickness={4}
-                  sx={{ 
+                  sx={{
                     mr: 2,
                     '& .MuiCircularProgress-circle': {
                       strokeLinecap: 'round',
                     }
-                  }} 
+                  }}
                 />
                 <Box>
                   <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
@@ -240,11 +248,11 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
                   </Typography>
                 </Box>
               </Box>
-              <Chip 
-                label={`${analysisStatus.progress_percentage}%`}
+              <Chip
+                label={`${analysisStatus?.progress_percentage || 0}%`}
                 color="primary"
-                sx={{ 
-                  fontSize: '16px', 
+                sx={{
+                  fontSize: '16px',
                   fontWeight: 700,
                   height: 40,
                   px: 2
@@ -254,11 +262,11 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
 
             {/* Progress Bar with Animation */}
             <Box sx={{ mb: 3 }}>
-              <LinearProgress 
-                variant="determinate" 
-                value={analysisStatus.progress_percentage} 
-                sx={{ 
-                  height: 12, 
+              <LinearProgress
+                variant="determinate"
+                value={analysisStatus?.progress_percentage || 0}
+                sx={{
+                  height: 12,
                   borderRadius: 6,
                   bgcolor: 'rgba(25, 118, 210, 0.1)',
                   '& .MuiLinearProgress-bar': {
@@ -271,10 +279,10 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
             </Box>
 
             {/* Current Document Info */}
-            <Paper 
+            <Paper
               elevation={0}
-              sx={{ 
-                p: 2.5, 
+              sx={{
+                p: 2.5,
                 bgcolor: '#f8fafc',
                 border: '1px solid #e2e8f0',
                 borderRadius: 2
@@ -312,10 +320,10 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
             </Paper>
 
             {/* Info Message */}
-            <Alert 
-              severity="info" 
+            <Alert
+              severity="info"
               icon={false}
-              sx={{ 
+              sx={{
                 mt: 3,
                 bgcolor: '#eff6ff',
                 border: '1px solid #bfdbfe',
