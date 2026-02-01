@@ -1,5 +1,6 @@
 """
 Questionnaire API endpoints - Generate and manage questionnaire responses
+INTELLIGENT SYSTEM: Generates dynamic questions based on uploaded documents and missing information
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -16,7 +17,7 @@ from app.schemas import (
     QuestionnaireGenerateResponse, SaveQuestionnaireRequest,
     QuestionnaireProgressResponse, QuestionResponse
 )
-from app.services.questionnaire_generator import get_questionnaire_service
+from app.services.intelligent_questionnaire_analyzer import get_intelligent_analyzer
 
 router = APIRouter()
 
@@ -27,7 +28,16 @@ async def generate_questionnaire(
     db: Session = Depends(get_db)
 ):
     """
-    Generate intelligent questionnaire based on analysis results
+    ✨ INTELLIGENT QUESTIONNAIRE GENERATION ✨
+    
+    Analyzes uploaded documents and generates dynamic questions based on:
+    1. Which documents are uploaded vs missing
+    2. What information is already extracted
+    3. What information is needed to generate missing documents
+    4. Low-confidence extractions that need verification
+    
+    Returns ONLY questions for missing information - no fixed questions!
+    ALL questions are OPTIONAL - user can skip any they don't want to answer.
     """
     # Check if application exists
     application = db.query(VisaApplication).filter(VisaApplication.id == application_id).first()
@@ -60,44 +70,96 @@ async def generate_questionnaire(
     ).all()
     uploaded_doc_types = [doc.document_type for doc in uploaded_docs]
     
-    # Generate questionnaire
-    questionnaire_service = get_questionnaire_service()
-    questions_by_category = questionnaire_service.generate_questions(
+    logger.info(f"📤 Generating intelligent questionnaire for application {application_id}")
+    logger.info(f"📊 Uploaded: {len(uploaded_doc_types)} documents, Missing: {16 - len(uploaded_doc_types)} documents")
+    
+    # ===== USE INTELLIGENT ANALYZER =====
+    analyzer = get_intelligent_analyzer()
+    questions_list, analysis_summary = analyzer.analyze_and_generate_questions(
+        uploaded_documents=uploaded_doc_types,
         extracted_data=extracted_data_dict,
-        uploaded_document_types=uploaded_doc_types
+        target_country=application.country,
+        visa_type=application.visa_type
     )
     
+    # Group questions by category for better UX
+    questions_by_category = analyzer.group_questions_by_category(questions_list)
+    
     # Save questions to database for tracking
-    for category, questions in questions_by_category.items():
-        for question in questions:
+    for category_name, questions in questions_by_category.items():
+        for question_req in questions:
             # Check if question already exists
             existing = db.query(QuestionnaireResponse).filter(
                 QuestionnaireResponse.application_id == application_id,
-                QuestionnaireResponse.question_key == question["key"]
+                QuestionnaireResponse.question_key == question_req.field_key
             ).first()
             
             if not existing:
+                # Determine category enum
+                category_enum = QuestionCategory.PERSONAL  # Default
+                if 'business' in category_name or 'employment' in category_name:
+                    category_enum = QuestionCategory.BUSINESS
+                elif 'travel' in category_name:
+                    category_enum = QuestionCategory.TRAVEL_PURPOSE
+                elif 'financial' in category_name:
+                    category_enum = QuestionCategory.FINANCIAL
+                elif 'assets' in category_name:
+                    category_enum = QuestionCategory.ASSETS
+                elif 'home_ties' in category_name:
+                    category_enum = QuestionCategory.HOME_TIES
+                
+                # Determine data type enum
+                data_type_map = {
+                    "text": QuestionDataType.TEXT,
+                    "textarea": QuestionDataType.TEXTAREA,
+                    "date": QuestionDataType.DATE,
+                    "number": QuestionDataType.NUMBER,
+                    "boolean": QuestionDataType.BOOLEAN,
+                    "select": QuestionDataType.SELECT,
+                    "email": QuestionDataType.EMAIL
+                }
+                data_type_enum = data_type_map.get(question_req.data_type, QuestionDataType.TEXT)
+                
+                # ===== CRITICAL: ALL QUESTIONS ARE OPTIONAL =====
                 qr = QuestionnaireResponse(
                     application_id=application_id,
-                    category=QuestionCategory[category.upper()],
-                    question_key=question["key"],
-                    question_text=question["text"],
-                    data_type=QuestionDataType[question["data_type"].upper()],
-                    is_required=question["is_required"],
-                    options=question.get("options")
+                    category=category_enum,
+                    question_key=question_req.field_key,
+                    question_text=question_req.question,
+                    data_type=data_type_enum,
+                    is_required=False,  # ← ALL QUESTIONS OPTIONAL
+                    options=question_req.options if question_req.options else None
                 )
                 db.add(qr)
     
     db.commit()
     
-    # Calculate total questions
-    total_questions = sum(len(q) for q in questions_by_category.values())
+    # Convert to response format
+    response_by_category = {}
+    for category_name, questions in questions_by_category.items():
+        response_by_category[category_name] = [
+            {
+                "key": q.field_key,
+                "text": q.question,
+                "data_type": q.data_type,
+                "priority": q.priority,
+                "is_required": False,  # ← ALL OPTIONAL
+                "options": q.options if q.options else [],
+                "placeholder": q.placeholder,
+                "help_text": q.help_text
+            }
+            for q in questions
+        ]
     
-    logger.info(f"Generated {total_questions} questions for application {application_id}")
+    total_questions = sum(len(q) for q in response_by_category.values())
     
-    # Add total_questions to response
-    result = questions_by_category.copy()
+    logger.info(f"✅ Generated {total_questions} intelligent questions across {len(response_by_category)} categories")
+    
+    # Add metadata to response
+    result = response_by_category.copy()
     result["total_questions"] = total_questions
+    result["analysis_summary"] = analysis_summary
+    result["note"] = "All questions are OPTIONAL. Answer only what you want to provide."
     
     return result
 
@@ -234,3 +296,42 @@ async def get_progress(
         categories_completed=completed_categories,
         categories_pending=pending_categories
     )
+
+
+@router.get("/analysis-summary/{application_id}")
+async def get_analysis_summary(
+    application_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get analysis summary showing uploaded vs missing documents
+    Used by questionnaire wizard to show context
+    """
+    application = db.query(VisaApplication).filter(VisaApplication.id == application_id).first()
+    if not application:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application not found"
+        )
+    
+    # Get uploaded documents
+    uploaded_docs = db.query(Document).filter(
+        Document.application_id == application_id,
+        Document.is_uploaded == True
+    ).all()
+    
+    uploaded_types = [doc.document_type.value for doc in uploaded_docs]
+    
+    # All document types
+    from app.models import DocumentType
+    all_types = [dt.value for dt in DocumentType]
+    
+    missing_types = [t for t in all_types if t not in uploaded_types]
+    
+    return {
+        "total_documents": 16,
+        "uploaded_count": len(uploaded_types),
+        "missing_count": len(missing_types),
+        "uploaded_types": uploaded_types,
+        "missing_types": missing_types
+    }

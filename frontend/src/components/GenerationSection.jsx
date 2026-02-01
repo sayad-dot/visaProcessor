@@ -23,13 +23,20 @@ import {
   Description,
   Autorenew,
   Error as ErrorIcon,
-  FolderZip
+  FolderZip,
+  AutoAwesome as AIIcon,
+  HourglassEmpty,
+  Download
 } from '@mui/icons-material';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
-const GenerationSection = ({ applicationId }) => {
+/**
+ * GenerationSection Component - Enhanced
+ * Beautiful visual progress per document
+ */
+const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
   const [status, setStatus] = useState('not_started');
   const [progress, setProgress] = useState(0);
   const [currentDocument, setCurrentDocument] = useState(null);
@@ -40,7 +47,27 @@ const GenerationSection = ({ applicationId }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Document type display names
+  // All 16 document types for final ZIP
+  const allDocumentTypes = [
+    { key: 'passport_copy', name: 'Passport Copy', category: 'uploaded' },
+    { key: 'visa_history', name: 'Visa History', category: 'uploaded' },
+    { key: 'nid_english', name: 'NID English', category: 'generated' },
+    { key: 'trade_license_english', name: 'Trade License (English)', category: 'generated' },
+    { key: 'tin_certificate', name: 'TIN Certificate', category: 'uploaded' },
+    { key: 'visiting_card', name: 'Visiting Card', category: 'generated' },
+    { key: 'cover_letter', name: 'Cover Letter', category: 'generated' },
+    { key: 'travel_itinerary', name: 'Travel Itinerary', category: 'generated' },
+    { key: 'travel_history', name: 'Travel History', category: 'generated' },
+    { key: 'air_ticket', name: 'Air Ticket Booking', category: 'uploaded' },
+    { key: 'hotel_booking', name: 'Hotel Booking', category: 'uploaded' },
+    { key: 'current_bank_statement', name: 'Current Account Statement', category: 'uploaded' },
+    { key: 'current_bank_solvency', name: 'Current Account Solvency', category: 'uploaded' },
+    { key: 'savings_bank_statement', name: 'Savings Account Statement', category: 'uploaded' },
+    { key: 'savings_bank_solvency', name: 'Savings Account Solvency', category: 'uploaded' },
+    { key: 'financial_statement', name: 'Financial Statement', category: 'generated' },
+  ];
+
+  // Document type display names for generation
   const docTypeNames = {
     cover_letter: 'Cover Letter',
     nid_english: 'NID English Translation',
@@ -113,11 +140,12 @@ const GenerationSection = ({ applicationId }) => {
         }
       );
       
-      // Create download link
+      // Create download link with applicant name
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Visa_Application_${applicationId}_All_Documents.zip`);
+      const fileName = applicantName.replace(/\s+/g, '_') || `Application_${applicationId}`;
+      link.setAttribute('download', `${fileName}_Visa_Documents.zip`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -140,237 +168,313 @@ const GenerationSection = ({ applicationId }) => {
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
-      <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
-        📄 AI Document Generation
-      </Typography>
-
-      {/* Status Banner */}
-      {status === 'not_started' && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body1" sx={{ fontWeight: 500 }}>
-            Ready to generate 8 professional visa documents using AI
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
-            All documents will be created based on your uploaded files and questionnaire responses.
-          </Typography>
-        </Alert>
-      )}
-
-      {status === 'generating' && (
-        <Alert severity="info" icon={<Autorenew className="rotating-icon" />} sx={{ mb: 3 }}>
-          <Typography variant="body1" sx={{ fontWeight: 500 }}>
-            {currentDocument ? `Generating: ${currentDocument}...` : 'Generating documents...'}
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            {documentsCompleted} of {totalDocuments} documents completed
-          </Typography>
-        </Alert>
-      )}
-
-      {status === 'completed' && (
-        <Alert severity="success" icon={<CheckCircle />} sx={{ mb: 3 }}>
-          <Typography variant="body1" sx={{ fontWeight: 500 }}>
-            ✅ All documents generated successfully!
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            {completedDocuments.length} documents ready for download
-          </Typography>
-        </Alert>
-      )}
-
-      {status === 'failed' && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          <Typography variant="body1" sx={{ fontWeight: 500 }}>
-            Generation failed. Please try again.
-          </Typography>
-        </Alert>
-      )}
-
-      {/* Progress Bar */}
-      {(status === 'generating' || status === 'completed') && (
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              Generation Progress
+    <Paper 
+      elevation={3} 
+      sx={{ 
+        p: 0, 
+        mb: 4, 
+        borderRadius: 3,
+        overflow: 'hidden'
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          p: 3,
+          background: status === 'completed' 
+            ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
+            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <AIIcon sx={{ fontSize: 40 }} />
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              📄 AI Document Generation
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-              {progress}%
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              Generate {totalDocuments} professional documents with AI
             </Typography>
           </Box>
-          <LinearProgress 
-            variant="determinate" 
-            value={progress} 
-            sx={{ 
-              height: 10, 
-              borderRadius: 5,
-              backgroundColor: 'rgba(0, 123, 255, 0.1)',
-              '& .MuiLinearProgress-bar': {
-                borderRadius: 5,
-                backgroundColor: status === 'completed' ? '#4caf50' : '#007bff'
-              }
-            }} 
-          />
         </Box>
-      )}
+        
+        {/* Stats */}
+        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+          <Chip
+            icon={<CheckCircle />}
+            label={`${documentsCompleted}/${totalDocuments} Generated`}
+            sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', '& .MuiChip-icon': { color: 'white' } }}
+          />
+          {status === 'completed' && (
+            <Chip
+              icon={<Download />}
+              label="Ready to Download"
+              sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'white', '& .MuiChip-icon': { color: 'white' } }}
+            />
+          )}
+        </Box>
+      </Box>
 
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+      <Box sx={{ p: 3 }}>
+        {/* Status Banner */}
         {status === 'not_started' && (
-          <Button
-            variant="contained"
-            size="large"
-            onClick={startGeneration}
-            disabled={isGenerating}
-            startIcon={<Description />}
-            sx={{
-              px: 4,
-              py: 1.5,
-              fontSize: '1rem',
-              textTransform: 'none',
-              fontWeight: 600,
-              background: 'linear-gradient(45deg, #007bff 30%, #0056b3 90%)',
-              '&:hover': {
-                background: 'linear-gradient(45deg, #0056b3 30%, #003d82 90%)',
-              }
-            }}
+          <Alert 
+            severity="info" 
+            icon={<AIIcon />}
+            sx={{ mb: 3, borderRadius: 2 }}
           >
-            Generate All Documents
-          </Button>
+            <Typography variant="body1" sx={{ fontWeight: 600 }}>
+              Ready to generate {totalDocuments} professional visa documents using AI
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.9 }}>
+              All documents will be created based on your uploaded files and questionnaire responses.
+            </Typography>
+          </Alert>
+        )}
+
+        {status === 'generating' && (
+          <Box sx={{ mb: 3 }}>
+            {/* Progress bar */}
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  ✨ Generating: {currentDocument || 'Starting...'}
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                  {progress}%
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={progress} 
+                sx={{ 
+                  height: 12, 
+                  borderRadius: 6,
+                  bgcolor: 'rgba(102, 126, 234, 0.1)',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 6,
+                    background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                  }
+                }} 
+              />
+            </Box>
+          </Box>
         )}
 
         {status === 'completed' && (
-          <Button
-            variant="contained"
-            size="large"
-            onClick={downloadAllDocuments}
-            disabled={isDownloading}
-            startIcon={isDownloading ? <CircularProgress size={20} color="inherit" /> : <FolderZip />}
-            sx={{
-              px: 4,
-              py: 1.5,
-              fontSize: '1rem',
-              textTransform: 'none',
-              fontWeight: 600,
-              background: 'linear-gradient(45deg, #28a745 30%, #1e7e34 90%)',
-              '&:hover': {
-                background: 'linear-gradient(45deg, #1e7e34 30%, #155724 90%)',
-              }
-            }}
+          <Alert 
+            severity="success" 
+            icon={<CheckCircle />}
+            sx={{ mb: 3, borderRadius: 2 }}
           >
-            {isDownloading ? 'Preparing Download...' : 'Download All Documents (ZIP)'}
-          </Button>
+            <Typography variant="body1" sx={{ fontWeight: 600 }}>
+              ✅ All {documentsCompleted} documents generated successfully!
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              Click the download button to get all 16 documents in a ZIP file.
+            </Typography>
+          </Alert>
+        )}
+
+        {/* Document Generation List */}
+        {(status === 'generating' || status === 'completed') && (
+          <Card variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Description color="primary" />
+                Document Generation Progress
+              </Typography>
+              <Divider sx={{ my: 2 }} />
+              <Grid container spacing={1}>
+                {Object.keys(docTypeNames).map((docKey, index) => {
+                  const isCompleted = completedDocuments.some(d => d.type === docKey);
+                  const isCurrent = currentDocument === docTypeNames[docKey];
+                  
+                  return (
+                    <Grid item xs={12} sm={6} key={docKey}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: isCompleted 
+                            ? 'rgba(76, 175, 80, 0.1)' 
+                            : isCurrent 
+                              ? 'rgba(102, 126, 234, 0.1)'
+                              : 'transparent',
+                          border: '1px solid',
+                          borderColor: isCompleted 
+                            ? 'success.light' 
+                            : isCurrent 
+                              ? 'primary.light'
+                              : 'divider',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        {isCompleted ? (
+                          <CheckCircle color="success" />
+                        ) : isCurrent ? (
+                          <CircularProgress size={24} />
+                        ) : (
+                          <HourglassEmpty color="disabled" />
+                        )}
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: isCompleted || isCurrent ? 600 : 400,
+                            color: isCompleted ? 'success.dark' : isCurrent ? 'primary.dark' : 'text.secondary'
+                          }}
+                        >
+                          {docTypeNames[docKey]}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Action Buttons */}
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+          {status === 'not_started' && (
+            <Button
+              variant="contained"
+              size="large"
+              onClick={startGeneration}
+              disabled={isGenerating}
+              startIcon={<AIIcon />}
+              sx={{
+                px: 5,
+                py: 1.5,
+                fontSize: '1.1rem',
+                textTransform: 'none',
+                fontWeight: 700,
+                borderRadius: 3,
+                background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #5a6fd6 30%, #6a3f96 90%)',
+                  boxShadow: '0 6px 20px rgba(102, 126, 234, 0.5)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              🚀 Generate All Documents
+            </Button>
+          )}
+
+          {status === 'completed' && (
+            <Button
+              variant="contained"
+              size="large"
+              onClick={downloadAllDocuments}
+              disabled={isDownloading}
+              startIcon={isDownloading ? <CircularProgress size={24} color="inherit" /> : <FolderZip />}
+              sx={{
+                px: 5,
+                py: 1.5,
+                fontSize: '1.1rem',
+                textTransform: 'none',
+                fontWeight: 700,
+                borderRadius: 3,
+                background: 'linear-gradient(45deg, #11998e 30%, #38ef7d 90%)',
+                boxShadow: '0 4px 15px rgba(17, 153, 142, 0.4)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #0e8377 30%, #2dd36f 90%)',
+                  boxShadow: '0 6px 20px rgba(17, 153, 142, 0.5)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {isDownloading ? 'Preparing Download...' : `📦 Download All 16 Documents (ZIP)`}
+            </Button>
+          )}
+        </Box>
+
+        {/* Errors */}
+        {errors.length > 0 && (
+          <Alert severity="warning" sx={{ mt: 3, borderRadius: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+              ⚠️ Some documents had issues:
+            </Typography>
+            {errors.map((error, index) => (
+              <Typography key={index} variant="body2" sx={{ ml: 2 }}>
+                • {error}
+              </Typography>
+            ))}
+          </Alert>
+        )}
+
+        {/* Info Cards for not_started state */}
+        {status === 'not_started' && (
+          <Grid container spacing={2} sx={{ mt: 3 }}>
+            <Grid item xs={12} md={4}>
+              <Card 
+                variant="outlined" 
+                sx={{ 
+                  height: '100%', 
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)'
+                }}
+              >
+                <CardContent>
+                  <Typography variant="h6" gutterBottom color="primary" sx={{ fontWeight: 600 }}>
+                    🤖 AI-Powered
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Uses Gemini 2.5 Flash for intelligent content generation based on your data
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Card 
+                variant="outlined" 
+                sx={{ 
+                  height: '100%', 
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, rgba(17, 153, 142, 0.05) 0%, rgba(56, 239, 125, 0.05) 100%)'
+                }}
+              >
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#11998e', fontWeight: 600 }}>
+                    ✅ Complete Set
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Generates all required documents for your Iceland visa application
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Card 
+                variant="outlined" 
+                sx={{ 
+                  height: '100%', 
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 193, 7, 0.05) 100%)'
+                }}
+              >
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#ff9800', fontWeight: 600 }}>
+                    📦 Easy Download
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Download all 16 documents (uploaded + generated) in one ZIP file
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
         )}
       </Box>
-
-      {/* Completed Documents List */}
-      {completedDocuments.length > 0 && (
-        <Card variant="outlined" sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CheckCircle color="success" />
-              Completed Documents
-            </Typography>
-            <Divider sx={{ my: 2 }} />
-            <List dense>
-              {completedDocuments.map((doc, index) => (
-                <ListItem key={index} sx={{ py: 1 }}>
-                  <ListItemIcon>
-                    <Description color="primary" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {doc.name}
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="body2" color="text.secondary">
-                        {formatFileSize(doc.size)}
-                      </Typography>
-                    }
-                  />
-                  <Chip
-                    label="Completed"
-                    color="success"
-                    size="small"
-                    icon={<CheckCircle />}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Errors */}
-      {errors.length > 0 && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-            Some documents had issues:
-          </Typography>
-          {errors.map((error, index) => (
-            <Typography key={index} variant="body2" sx={{ ml: 2 }}>
-              • {error}
-            </Typography>
-          ))}
-        </Alert>
-      )}
-
-      {/* Info Cards */}
-      {status === 'not_started' && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
-            <Card variant="outlined" sx={{ height: '100%', backgroundColor: 'rgba(0, 123, 255, 0.05)' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom color="primary">
-                  🤖 AI-Powered
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Uses Gemini 2.5 Flash for intelligent content generation based on your data
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card variant="outlined" sx={{ height: '100%', backgroundColor: 'rgba(40, 167, 69, 0.05)' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom color="success">
-                  ✅ Complete Set
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Generates all 8 required documents for your Iceland visa application
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card variant="outlined" sx={{ height: '100%', backgroundColor: 'rgba(255, 193, 7, 0.05)' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ color: '#ff9800' }}>
-                  📦 Easy Download
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Download all 16 documents (uploaded + generated) in one ZIP file
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
-
-      {/* CSS for rotating icon */}
-      <style>
-        {`
-          @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          .rotating-icon {
-            animation: rotate 2s linear infinite;
-          }
-        `}
-      </style>
     </Paper>
   );
 };

@@ -7,7 +7,8 @@ import {
   Chip,
   IconButton,
   LinearProgress,
-  Tooltip
+  Tooltip,
+  Button
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -15,12 +16,13 @@ import {
   Error as ErrorIcon,
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
-  Description as DescriptionIcon
+  Description as DescriptionIcon,
+  AutoAwesome as AIIcon
 } from '@mui/icons-material';
 
 /**
- * DocumentCard Component
- * Displays individual document status with upload progress and actions
+ * DocumentCard Component - Redesigned
+ * Displays individual document with prominent upload button
  */
 const DocumentCard = ({
   documentType,
@@ -40,45 +42,47 @@ const DocumentCard = ({
       .join(' ');
   };
 
-  // Get status icon and color
+  // Get status info
   const getStatusInfo = () => {
     if (uploadedDocument) {
       return {
         icon: <CheckCircleIcon />,
         color: 'success',
         label: 'Uploaded',
-        bgColor: '#e8f5e9'
+        bgColor: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
+        borderColor: '#4caf50'
       };
     } else if (uploading) {
       return {
         icon: <CloudUploadIcon />,
         color: 'info',
         label: 'Uploading...',
-        bgColor: '#e3f2fd'
+        bgColor: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+        borderColor: '#2196f3'
       };
     } else if (requiredDocument?.can_be_generated) {
-      // AI will generate this document - not required to upload
       return {
-        icon: <DescriptionIcon />,
+        icon: <AIIcon />,
         color: 'default',
         label: 'AI Generated',
-        bgColor: '#f5f5f5'
+        bgColor: 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
+        borderColor: '#9c27b0'
       };
     } else if (requiredDocument?.is_mandatory) {
-      // MANDATORY - user MUST upload this document
       return {
         icon: <ErrorIcon />,
         color: 'error',
         label: 'Required',
-        bgColor: '#ffebee'
+        bgColor: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+        borderColor: '#f44336'
       };
     } else {
-      // OPTIONAL - user can upload if available
       return {
         icon: <CloudUploadIcon />,
         color: 'info',
         label: 'Optional',
-        bgColor: '#e3f2fd'
+        bgColor: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
+        borderColor: '#ff9800'
       };
     }
   };
@@ -95,15 +99,16 @@ const DocumentCard = ({
   return (
     <Card
       sx={{
-        height: '100%',
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'stretch',
         position: 'relative',
-        backgroundColor: statusInfo.bgColor,
-        border: uploadedDocument ? '2px solid #4caf50' : '1px solid #e0e0e0',
+        background: statusInfo.bgColor,
+        border: `2px solid ${statusInfo.borderColor}`,
+        borderRadius: 2,
         transition: 'all 0.3s ease',
+        overflow: 'hidden',
         '&:hover': {
-          boxShadow: 3,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           transform: 'translateY(-2px)'
         }
       }}
@@ -123,18 +128,43 @@ const DocumentCard = ({
         />
       )}
 
-      <CardContent sx={{ flexGrow: 1, p: 2 }}>
-        {/* Document Icon and Type */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+      {/* Left Section - Document Info */}
+      <CardContent sx={{ flexGrow: 1, p: 2, display: 'flex', alignItems: 'center' }}>
+        {/* Icon */}
+        <Box
+          sx={{
+            width: 50,
+            height: 50,
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(255,255,255,0.7)',
+            mr: 2,
+            flexShrink: 0
+          }}
+        >
           <DescriptionIcon
             sx={{
-              fontSize: 40,
-              color: uploadedDocument ? 'success.main' : 'text.secondary',
-              mr: 1.5
+              fontSize: 30,
+              color: uploadedDocument ? 'success.main' : 'text.secondary'
             }}
           />
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+        </Box>
+
+        {/* Document Name & Status */}
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                fontSize: '1rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
               {formatDocumentType(documentType)}
             </Typography>
             <Chip
@@ -142,83 +172,99 @@ const DocumentCard = ({
               label={statusInfo.label}
               color={statusInfo.color}
               size="small"
-              sx={{ mt: 0.5 }}
+              sx={{ height: 24, fontSize: '0.7rem' }}
             />
           </Box>
-        </Box>
-
-        {/* Document Description */}
-        {requiredDocument && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {requiredDocument.description || 'Please upload this required document'}
-          </Typography>
-        )}
-
-        {/* Uploaded File Info */}
-        {uploadedDocument && (
-          <Box
-            sx={{
-              mt: 2,
-              p: 1.5,
-              backgroundColor: 'rgba(255, 255, 255, 0.7)',
-              borderRadius: 1,
-              border: '1px solid #e0e0e0'
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-              File: {uploadedDocument.document_name}
-            </Typography>
-            {uploadedDocument.file_size && (
-              <Typography variant="caption" color="text.secondary">
-                Size: {formatFileSize(uploadedDocument.file_size)}
-              </Typography>
-            )}
-            {uploadedDocument.created_at && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                Uploaded: {new Date(uploadedDocument.created_at).toLocaleString()}
-              </Typography>
-            )}
-          </Box>
-        )}
-
-        {/* Action Buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 1 }}>
+          
+          {/* Description or File Info */}
           {uploadedDocument ? (
-            <>
-              <Tooltip title="View Document">
-                <IconButton
-                  size="small"
-                  color="primary"
-                  onClick={() => onView && onView(uploadedDocument)}
-                >
-                  <VisibilityIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Delete Document">
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => onDelete && onDelete(uploadedDocument)}
-                  disabled={uploading}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </Tooltip>
-            </>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+              📎 {uploadedDocument.document_name} • {formatFileSize(uploadedDocument.file_size)}
+            </Typography>
           ) : (
-            <Tooltip title="Upload Document">
-              <IconButton
-                size="small"
-                color="primary"
-                onClick={() => onUpload && onUpload(documentType)}
-                disabled={uploading}
-              >
-                <CloudUploadIcon />
-              </IconButton>
-            </Tooltip>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+              {requiredDocument?.description?.substring(0, 60) || 'Upload this document'}
+              {requiredDocument?.description?.length > 60 ? '...' : ''}
+            </Typography>
           )}
         </Box>
       </CardContent>
+
+      {/* Right Section - Actions */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          px: 2,
+          backgroundColor: 'rgba(255,255,255,0.3)',
+          borderLeft: '1px solid rgba(0,0,0,0.1)'
+        }}
+      >
+        {uploadedDocument ? (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tooltip title="View Document">
+              <IconButton
+                color="primary"
+                onClick={() => onView && onView(uploadedDocument)}
+                sx={{
+                  backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                  '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.2)' }
+                }}
+              >
+                <VisibilityIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete Document">
+              <IconButton
+                color="error"
+                onClick={() => onDelete && onDelete(uploadedDocument)}
+                disabled={uploading}
+                sx={{
+                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                  '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.2)' }
+                }}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        ) : requiredDocument?.can_be_generated ? (
+          <Chip
+            icon={<AIIcon sx={{ fontSize: 18 }} />}
+            label="AI Creates"
+            size="medium"
+            sx={{
+              backgroundColor: 'rgba(156, 39, 176, 0.15)',
+              color: '#7b1fa2',
+              fontWeight: 600
+            }}
+          />
+        ) : (
+          <Button
+            variant="contained"
+            color={requiredDocument?.is_mandatory ? "error" : "primary"}
+            size="large"
+            startIcon={<CloudUploadIcon />}
+            onClick={() => onUpload && onUpload(documentType)}
+            disabled={uploading}
+            sx={{
+              minWidth: 140,
+              height: 48,
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              borderRadius: 2,
+              textTransform: 'none',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                transform: 'scale(1.02)'
+              }
+            }}
+          >
+            {uploading ? 'Uploading...' : 'Upload'}
+          </Button>
+        )}
+      </Box>
     </Card>
   );
 };

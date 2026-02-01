@@ -24,22 +24,26 @@ import {
   Chip,
   LinearProgress,
   IconButton,
-  FormHelperText
+  FormHelperText,
+  Paper
 } from '@mui/material';
 import {
   NavigateNext as NextIcon,
   NavigateBefore as BackIcon,
   Save as SaveIcon,
   Close as CloseIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon,
+  QuestionAnswer as QuestionIcon,
+  AutoAwesome as AIIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 /**
- * QuestionnaireWizard Component
- * Multi-step form for answering generated questions
+ * QuestionnaireWizard Component - Enhanced
+ * Multi-step form with required markers and completion warnings
  */
 const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
   const [activeStep, setActiveStep] = useState(0);
@@ -49,6 +53,8 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(null);
+  const [analysisSummary, setAnalysisSummary] = useState(null);
+  const [showCompletionWarning, setShowCompletionWarning] = useState(false);
 
   const categoryNames = {
     personal: 'Personal Information',
@@ -78,6 +84,7 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
       loadQuestionnaire();
       loadExistingAnswers();
       loadProgress();
+      loadAnalysisSummary();
     }
   }, [open, applicationId]);
 
@@ -98,6 +105,18 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAnalysisSummary = async () => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/questionnaire/analysis-summary/${applicationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAnalysisSummary(data);
+      }
+    } catch (err) {
+      // Silently handle - analysis summary is optional
     }
   };
 
@@ -216,6 +235,16 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
   };
 
   const handleComplete = async () => {
+    // Check if too many questions are blank
+    const totalQuestions = Object.values(questions).flat().length;
+    const answeredQuestions = Object.keys(answers).filter(k => answers[k] && answers[k] !== '').length;
+    const completionPercentage = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 100;
+    
+    if (completionPercentage < 80 && !showCompletionWarning) {
+      setShowCompletionWarning(true);
+      return;
+    }
+    
     await saveAnswers(false);
     if (onComplete) {
       onComplete();
@@ -340,6 +369,13 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
 
   // Filter out empty categories
   const availableSteps = categoryOrder.filter(cat => questions[cat]?.length > 0);
+  
+  // Calculate completion stats
+  const totalQuestions = Object.values(questions).flat().length;
+  const answeredCount = Object.keys(answers).filter(k => answers[k] && answers[k] !== '').length;
+  const requiredQuestions = Object.values(questions).flat().filter(q => q.is_required).length;
+  const answeredRequired = Object.values(questions).flat()
+    .filter(q => q.is_required && answers[q.key] && answers[q.key] !== '').length;
 
   return (
     <Dialog 
@@ -348,42 +384,112 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
       maxWidth="md"
       fullWidth
       PaperProps={{
-        sx: { minHeight: '80vh' }
+        sx: { minHeight: '80vh', borderRadius: 3 }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box>
-          <Typography variant="h5">Application Questionnaire</Typography>
-          {progress && (
-            <Typography variant="caption" color="text.secondary">
-              {progress.completion_percentage}% Complete • {progress.answered_questions} of {progress.total_questions} answered
-            </Typography>
-          )}
+      {/* Header with gradient */}
+      <Box
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          p: 3
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <QuestionIcon sx={{ fontSize: 36 }} />
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                Smart Questionnaire
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                {analysisSummary?.missing_count || 0} documents need info • {totalQuestions} questions
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton onClick={onClose} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
         </Box>
-        <IconButton onClick={onClose}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+        
+        {/* Stats chips */}
+        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+          <Chip
+            icon={<CheckCircleIcon />}
+            label={`${answeredCount}/${totalQuestions} Answered`}
+            sx={{ 
+              bgcolor: 'rgba(255,255,255,0.2)', 
+              color: 'white',
+              '& .MuiChip-icon': { color: 'white' }
+            }}
+          />
+          <Chip
+            label={`${requiredQuestions} Required *`}
+            sx={{ 
+              bgcolor: 'rgba(255,193,7,0.3)', 
+              color: 'white'
+            }}
+          />
+        </Box>
+      </Box>
 
       {/* Progress Bar */}
-      {progress && (
-        <LinearProgress 
-          variant="determinate" 
-          value={progress.completion_percentage || 0} 
-          sx={{ height: 6 }}
-        />
-      )}
+      <LinearProgress 
+        variant="determinate" 
+        value={progress?.completion_percentage || (totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0)} 
+        sx={{ 
+          height: 8,
+          '& .MuiLinearProgress-bar': {
+            background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)'
+          }
+        }}
+      />
 
       <DialogContent sx={{ pt: 3 }}>
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-            <CircularProgress />
+          <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: 400, gap: 2 }}>
+            <CircularProgress size={60} />
+            <Typography variant="h6" color="text.secondary">
+              Generating Smart Questions...
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Based on your uploaded and missing documents
+            </Typography>
           </Box>
         ) : (
           <>
             {error && (
               <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
                 {error}
+              </Alert>
+            )}
+            
+            {/* Completion Warning */}
+            {showCompletionWarning && (
+              <Alert 
+                severity="warning" 
+                icon={<WarningIcon />}
+                sx={{ mb: 2 }}
+                action={
+                  <Button 
+                    color="inherit" 
+                    size="small"
+                    onClick={() => {
+                      setShowCompletionWarning(false);
+                      handleComplete();
+                    }}
+                  >
+                    Continue Anyway
+                  </Button>
+                }
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  💡 More answers = Better AI-generated documents!
+                </Typography>
+                <Typography variant="body2">
+                  You've only answered {answeredCount} of {totalQuestions} questions ({Math.round((answeredCount/totalQuestions)*100)}%).
+                  Consider answering more for better results.
+                </Typography>
               </Alert>
             )}
 
@@ -397,14 +503,21 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
             </Stepper>
 
             {/* Current Category Title */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                {categoryNames[currentCategory]}
+            <Paper
+              sx={{
+                p: 2,
+                mb: 3,
+                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                borderRadius: 2
+              }}
+            >
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                📝 {categoryNames[currentCategory]}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {categoryQuestions.filter(q => q.is_required).length} required questions
+                {categoryQuestions.filter(q => q.is_required).length} required questions marked with <span style={{ color: '#f44336', fontWeight: 600 }}>*</span>
               </Typography>
-            </Box>
+            </Paper>
 
             {/* Questions */}
             {categoryQuestions.length === 0 ? (

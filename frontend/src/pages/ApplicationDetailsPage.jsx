@@ -217,9 +217,8 @@ const ApplicationDetailsPage = () => {
 
         {/* Progress Tracker */}
         <ProgressTracker
-          totalDocuments={uploadedCount}
-          uploadedDocuments={uploadedMandatoryCount}
-          requiredDocuments={requiredCount}
+          requiredDocuments={requiredDocuments}
+          uploadedDocuments={uploadedDocuments}
         />
 
         <Grid container spacing={3}>
@@ -342,6 +341,7 @@ const ApplicationDetailsPage = () => {
               <AnalysisSection
                 applicationId={id}
                 onAnalysisComplete={handleAnalysisComplete}
+                onOpenQuestionnaire={() => setQuestionnaireOpen(true)}
               />
             </Grid>
           )}
@@ -371,7 +371,10 @@ const ApplicationDetailsPage = () => {
           {/* Document Generation Section - Show after questionnaire */}
           {analysisComplete && (
             <Grid item xs={12}>
-              <GenerationSection applicationId={id} />
+              <GenerationSection 
+                applicationId={id} 
+                applicantName={application?.applicant_name || ''}
+              />
             </Grid>
           )}
         </Grid>

@@ -16,7 +16,11 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Paper
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Analytics as AnalyticsIcon,
@@ -24,26 +28,57 @@ import {
   Refresh as RefreshIcon,
   ExpandMore as ExpandMoreIcon,
   Description as DescriptionIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  Warning as WarningIcon,
+  Error as ErrorIcon,
+  Star as StarIcon,
+  CloudUpload as UploadIcon,
+  QuestionAnswer as QuestionIcon
 } from '@mui/icons-material';
 import { documentService } from '../services/apiService';
 
 /**
- * AnalysisSection Component
- * Handles document analysis - start, progress tracking, and results display
+ * AnalysisSection Component - Redesigned
+ * Beautiful analysis with score-based results popup
  */
-const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
+const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnaire }) => {
   const [analysisStatus, setAnalysisStatus] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState(null);
   const [polling, setPolling] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [analysisResults, setAnalysisResults] = useState(null);
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [worstDocuments, setWorstDocuments] = useState([]);
+
+  // Rotating messages during analysis
+  const analysisMessages = [
+    "🔍 Reading your passport details...",
+    "📊 Analyzing bank statements...",
+    "🆔 Extracting NID information...",
+    "📝 Processing document content...",
+    "🤖 AI is understanding your documents...",
+    "✨ Almost done..."
+  ];
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
   // Check if analysis already exists
   useEffect(() => {
     checkExistingAnalysis();
   }, [applicationId]);
+
+  // Rotate messages during analysis
+  useEffect(() => {
+    let messageInterval;
+    if (isAnalyzing) {
+      messageInterval = setInterval(() => {
+        setCurrentMessageIndex((prev) => (prev + 1) % analysisMessages.length);
+      }, 3000);
+    }
+    return () => {
+      if (messageInterval) clearInterval(messageInterval);
+    };
+  }, [isAnalyzing]);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -153,6 +188,27 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
       if (response.ok) {
         const data = await response.json();
         setAnalysisResults(data);
+        
+        // Calculate worst performing documents
+        if (data.extracted_data) {
+          const docScores = Object.entries(data.extracted_data)
+            .map(([docType, docData]) => ({
+              docType: docType.replace(/_/g, ' ').toUpperCase(),
+              confidence: docData.confidence || 0
+            }))
+            .sort((a, b) => a.confidence - b.confidence);
+          
+          // Get 2-3 worst documents
+          const score = data.overall_completeness || data.completeness_score || 0;
+          let worstCount = 2;
+          if (score < 70) worstCount = 3;
+          if (score < 50) worstCount = docScores.length;
+          
+          setWorstDocuments(docScores.slice(0, worstCount).filter(d => d.confidence < 85));
+        }
+        
+        // Show result dialog
+        setShowResultDialog(true);
       }
     } catch (err) {
       console.error('Error fetching results:', err);
@@ -169,8 +225,55 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
     }
   };
 
+  // Get score category info
+  const getScoreInfo = (score) => {
+    if (score >= 85) {
+      return {
+        level: 'excellent',
+        title: '🎉 Excellent Analysis!',
+        subtitle: 'Your documents were extracted with high accuracy.',
+        color: '#4caf50',
+        bgGradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+        icon: <StarIcon sx={{ fontSize: 60, color: '#FFD700' }} />,
+        suggestion: null
+      };
+    } else if (score >= 70) {
+      return {
+        level: 'good',
+        title: '👍 Good Analysis',
+        subtitle: 'Most information extracted successfully.',
+        color: '#ff9800',
+        bgGradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        icon: <CheckCircleIcon sx={{ fontSize: 60, color: 'white' }} />,
+        suggestion: 'Consider re-uploading these documents with better quality for improved accuracy:'
+      };
+    } else if (score >= 50) {
+      return {
+        level: 'average',
+        title: '⚠️ Average Analysis',
+        subtitle: 'Some documents need better quality.',
+        color: '#ff5722',
+        bgGradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        icon: <WarningIcon sx={{ fontSize: 60, color: 'white' }} />,
+        suggestion: 'Please re-upload these documents with better quality before proceeding:'
+      };
+    } else {
+      return {
+        level: 'poor',
+        title: '❌ Poor Analysis',
+        subtitle: 'Document quality is too low.',
+        color: '#f44336',
+        bgGradient: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+        icon: <ErrorIcon sx={{ fontSize: 60, color: 'white' }} />,
+        suggestion: 'Please re-upload ALL documents in clear PDF format and try again:'
+      };
+    }
+  };
+
   const isComplete = analysisStatus?.status === 'completed';
   const isInProgress = analysisStatus?.status === 'analyzing' || analysisStatus?.status === 'started';
+  const completenessScore = analysisStatus?.completeness_score || analysisResults?.overall_completeness || 0;
+  const scoreInfo = getScoreInfo(completenessScore);
 
   return (
     <Card sx={{ mb: 3 }}>
@@ -222,15 +325,15 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 mb: 3,
-                p: 2,
-                bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                borderRadius: 2,
-                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)'
+                p: 2.5,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%)',
+                border: '1px solid rgba(102, 126, 234, 0.3)'
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <CircularProgress
-                  size={40}
+                  size={50}
                   thickness={4}
                   sx={{
                     mr: 2,
@@ -240,45 +343,62 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
                   }}
                 />
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, color: '#1976d2' }}>
                     🔍 AI Analysis in Progress
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Extracting information from your documents...
+                  <Typography 
+                    variant="body1" 
+                    color="text.secondary"
+                    sx={{
+                      animation: 'fadeInOut 3s ease-in-out infinite',
+                      '@keyframes fadeInOut': {
+                        '0%, 100%': { opacity: 0.5 },
+                        '50%': { opacity: 1 },
+                      }
+                    }}
+                  >
+                    {analysisMessages[currentMessageIndex]}
                   </Typography>
                 </Box>
               </Box>
-              <Chip
-                label={`${analysisStatus?.progress_percentage || 0}%`}
-                color="primary"
-                sx={{
-                  fontSize: '16px',
-                  fontWeight: 700,
-                  height: 40,
-                  px: 2
-                }}
-              />
+              <Box sx={{ textAlign: 'right' }}>
+                <Typography variant="h3" sx={{ fontWeight: 800, color: '#1976d2', lineHeight: 1 }}>
+                  {analysisStatus?.progress_percentage || 0}%
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {analysisStatus?.documents_analyzed || 0}/{analysisStatus?.total_documents || 0} docs
+                </Typography>
+              </Box>
             </Box>
 
             {/* Progress Bar with Animation */}
             <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Analyzing: {analysisStatus?.current_document || 'Starting...'}
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {analysisStatus?.documents_analyzed || 0} of {analysisStatus?.total_documents || 0}
+                </Typography>
+              </Box>
               <LinearProgress
                 variant="determinate"
                 value={analysisStatus?.progress_percentage || 0}
                 sx={{
-                  height: 12,
-                  borderRadius: 6,
+                  height: 16,
+                  borderRadius: 8,
                   bgcolor: 'rgba(25, 118, 210, 0.1)',
                   '& .MuiLinearProgress-bar': {
-                    borderRadius: 6,
-                    background: 'linear-gradient(90deg, #1976d2 0%, #2196f3 100%)',
-                    boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)'
+                    borderRadius: 8,
+                    background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                    boxShadow: '0 2px 10px rgba(102, 126, 234, 0.4)',
+                    transition: 'transform 0.8s ease'
                   }
                 }}
               />
             </Box>
 
-            {/* Current Document Info */}
+            {/* Document Steps */}
             <Paper
               elevation={0}
               sx={{
@@ -288,35 +408,38 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
                 borderRadius: 2
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                <Box
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    bgcolor: '#10b981',
-                    mr: 1,
-                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    '@keyframes pulse': {
-                      '0%, 100%': {
-                        opacity: 1,
-                      },
-                      '50%': {
-                        opacity: 0.5,
-                      },
-                    },
-                  }}
-                />
-                <Typography variant="body1" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                  Currently Processing
-                </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 2, color: '#1e293b' }}>
+                📋 Processing Queue:
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {[...Array(analysisStatus?.total_documents || 3)].map((_, idx) => (
+                  <Chip
+                    key={idx}
+                    size="small"
+                    label={`Doc ${idx + 1}`}
+                    color={
+                      idx < (analysisStatus?.documents_analyzed || 0) 
+                        ? 'success' 
+                        : idx === (analysisStatus?.documents_analyzed || 0)
+                          ? 'primary'
+                          : 'default'
+                    }
+                    icon={
+                      idx < (analysisStatus?.documents_analyzed || 0) 
+                        ? <CheckCircleIcon /> 
+                        : idx === (analysisStatus?.documents_analyzed || 0)
+                          ? <CircularProgress size={12} color="inherit" />
+                          : undefined
+                    }
+                    sx={{
+                      transition: 'all 0.3s ease',
+                      ...(idx === (analysisStatus?.documents_analyzed || 0) && {
+                        animation: 'pulse 1.5s ease-in-out infinite',
+                      })
+                    }}
+                  />
+                ))}
               </Box>
-              <Typography variant="body1" color="primary" sx={{ fontWeight: 500, mb: 1 }}>
-                📄 {analysisStatus.current_document || 'Starting analysis...'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                ✅ {analysisStatus.documents_analyzed} of {analysisStatus.total_documents} documents analyzed
-              </Typography>
             </Paper>
 
             {/* Info Message */}
@@ -327,9 +450,7 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
                 mt: 3,
                 bgcolor: '#eff6ff',
                 border: '1px solid #bfdbfe',
-                '& .MuiAlert-message': {
-                  width: '100%'
-                }
+                '& .MuiAlert-message': { width: '100%' }
               }}
             >
               <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
@@ -343,23 +464,99 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
         {/* Completed */}
         {isComplete && (
           <Box>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <CheckCircleIcon sx={{ mr: 1 }} />
-                  <Typography variant="body1">
-                    Analysis Complete! {analysisStatus.completeness_score}% information extracted
-                  </Typography>
-                </Box>
-                <Button
-                  size="small"
-                  startIcon={<RefreshIcon />}
-                  onClick={startAnalysis}
-                >
-                  Re-analyze
-                </Button>
+            {/* Success Banner */}
+            <Paper
+              sx={{
+                p: 3,
+                mb: 2,
+                background: scoreInfo.bgGradient,
+                color: 'white',
+                borderRadius: 3,
+                textAlign: 'center'
+              }}
+            >
+              {scoreInfo.icon}
+              <Typography variant="h5" sx={{ fontWeight: 700, mt: 1 }}>
+                {scoreInfo.title}
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9, mt: 0.5 }}>
+                {scoreInfo.subtitle}
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
+                <Chip
+                  label={`${completenessScore}% Extracted`}
+                  sx={{
+                    backgroundColor: 'rgba(255,255,255,0.25)',
+                    color: 'white',
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    height: 36
+                  }}
+                />
+                <Chip
+                  label={`${analysisStatus?.documents_analyzed || 0} Documents`}
+                  sx={{
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    fontWeight: 600
+                  }}
+                />
               </Box>
-            </Alert>
+            </Paper>
+
+            {/* Suggestions for low scores */}
+            {scoreInfo.suggestion && worstDocuments.length > 0 && (
+              <Alert
+                severity={scoreInfo.level === 'poor' ? 'error' : 'warning'}
+                icon={<WarningIcon />}
+                sx={{ mb: 2 }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                  {scoreInfo.suggestion}
+                </Typography>
+                <Box sx={{ pl: 1 }}>
+                  {worstDocuments.map((doc, idx) => (
+                    <Typography key={idx} variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      • {doc.docType} ({doc.confidence}% confidence)
+                    </Typography>
+                  ))}
+                </Box>
+              </Alert>
+            )}
+
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mb: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={startAnalysis}
+                sx={{ borderRadius: 2 }}
+              >
+                Re-analyze
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<QuestionIcon />}
+                onClick={() => {
+                  if (onOpenQuestionnaire) {
+                    onOpenQuestionnaire();
+                  } else if (onAnalysisComplete) {
+                    onAnalysisComplete(analysisResults);
+                  }
+                }}
+                size="large"
+                sx={{
+                  borderRadius: 2,
+                  px: 4,
+                  background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #5a6fd6 30%, #6a3f96 90%)',
+                  }
+                }}
+              >
+                Continue to Questionnaire
+              </Button>
+            </Box>
 
             {/* Results Summary */}
             {analysisResults && (
@@ -367,17 +564,25 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
                 <Card variant="outlined" sx={{ mt: 2, bgcolor: 'grey.50' }}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
-                      Extracted Information Summary
+                      📊 Extracted Information Summary
                     </Typography>
                     <List dense>
                       {Object.entries(analysisResults.extracted_data || {}).map(([docType, data]) => (
                         <ListItem key={docType}>
                           <ListItemIcon>
-                            <DescriptionIcon color="primary" fontSize="small" />
+                            <DescriptionIcon 
+                              color={(data.confidence || 0) >= 80 ? 'success' : (data.confidence || 0) >= 60 ? 'warning' : 'error'} 
+                              fontSize="small" 
+                            />
                           </ListItemIcon>
                           <ListItemText
                             primary={docType.replace(/_/g, ' ').toUpperCase()}
                             secondary={`Confidence: ${data.confidence || 0}%`}
+                          />
+                          <Chip
+                            size="small"
+                            label={`${data.confidence || 0}%`}
+                            color={(data.confidence || 0) >= 80 ? 'success' : (data.confidence || 0) >= 60 ? 'warning' : 'error'}
                           />
                         </ListItem>
                       ))}
@@ -390,7 +595,7 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
         )}
 
         {/* Info Note */}
-        {!isInProgress && (
+        {!isInProgress && !isComplete && (
           <Box sx={{ mt: 2, p: 2, bgcolor: 'info.50', borderRadius: 1, display: 'flex', alignItems: 'start' }}>
             <InfoIcon color="info" sx={{ mr: 1, mt: 0.5 }} fontSize="small" />
             <Typography variant="caption" color="text.secondary">
@@ -400,6 +605,96 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete }) => {
           </Box>
         )}
       </CardContent>
+
+      {/* Analysis Result Dialog */}
+      <Dialog
+        open={showResultDialog}
+        onClose={() => setShowResultDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <Box
+          sx={{
+            p: 4,
+            background: scoreInfo.bgGradient,
+            color: 'white',
+            textAlign: 'center'
+          }}
+        >
+          {scoreInfo.icon}
+          <Typography variant="h4" sx={{ fontWeight: 700, mt: 2 }}>
+            {scoreInfo.title}
+          </Typography>
+          <Typography variant="h2" sx={{ fontWeight: 800, my: 2 }}>
+            {completenessScore}%
+          </Typography>
+          <Typography variant="body1" sx={{ opacity: 0.9 }}>
+            {scoreInfo.subtitle}
+          </Typography>
+        </Box>
+        
+        <DialogContent sx={{ pt: 3 }}>
+          {scoreInfo.suggestion && worstDocuments.length > 0 && (
+            <Alert 
+              severity={scoreInfo.level === 'poor' ? 'error' : 'warning'}
+              sx={{ mb: 2 }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                💡 {scoreInfo.suggestion}
+              </Typography>
+              {worstDocuments.map((doc, idx) => (
+                <Typography key={idx} variant="body2">
+                  • {doc.docType} ({doc.confidence}%)
+                </Typography>
+              ))}
+            </Alert>
+          )}
+          
+          <Typography variant="body1" sx={{ textAlign: 'center', color: 'text.secondary' }}>
+            {scoreInfo.level === 'poor' 
+              ? 'Re-upload your documents for better results before proceeding.'
+              : 'Now let\'s gather some additional information to generate your visa documents!'
+            }
+          </Typography>
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 3, justifyContent: 'center', gap: 2 }}>
+          {scoreInfo.level === 'poor' && (
+            <Button 
+              variant="outlined" 
+              onClick={() => setShowResultDialog(false)}
+              startIcon={<UploadIcon />}
+            >
+              Re-upload Documents
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            onClick={() => {
+              setShowResultDialog(false);
+              if (onOpenQuestionnaire) {
+                onOpenQuestionnaire();
+              } else if (onAnalysisComplete) {
+                onAnalysisComplete(analysisResults);
+              }
+            }}
+            size="large"
+            startIcon={<QuestionIcon />}
+            sx={{
+              px: 4,
+              background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+            }}
+          >
+            Continue to Questionnaire
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };
