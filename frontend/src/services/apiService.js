@@ -148,8 +148,8 @@ export const generationService = {
     return response.data
   }
 }
-  },
 
+export const requiredDocumentsService = {
   // Get required documents for a country and visa type
   getRequiredDocuments: async (country, visaType) => {
     const response = await api.get(`/required-documents/${country}/${visaType}`)
