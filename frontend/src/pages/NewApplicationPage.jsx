@@ -106,7 +106,8 @@ const NewApplicationPage = () => {
                 onChange={handleChange}
                 label="Country"
               >
-                <MenuItem value="Iceland">Iceland</MenuItem>
+                <MenuItem value="Iceland">🇮🇸 Iceland</MenuItem>
+                <MenuItem value="UK">🇬🇧 United Kingdom (UK)</MenuItem>
               </Select>
             </FormControl>
             

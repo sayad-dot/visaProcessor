@@ -397,8 +397,9 @@ const ApplicationDetailsPage = () => {
         <Grid container spacing={3}>
           {/* Application Information */}
           <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+            <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <DescriptionIcon color="primary" />
                 Application Information
               </Typography>
               
@@ -450,9 +451,10 @@ const ApplicationDetailsPage = () => {
 
           {/* Documents Section */}
           <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
+            <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CloudUploadIcon color="primary" />
                   Documents Management
                 </Typography>
                 <Button
@@ -495,7 +497,7 @@ const ApplicationDetailsPage = () => {
           {analysisResults && !isAnalyzing && (
             <Grid item xs={12}>
               <Grow in={true}>
-                <Paper sx={{ p: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+                <Paper elevation={4} sx={{ p: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', borderRadius: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                     <CheckCircleIcon sx={{ fontSize: 48 }} />
                     <Box>
@@ -568,7 +570,7 @@ const ApplicationDetailsPage = () => {
           {showGenerateButton && (
             <Grid item xs={12}>
               <Grow in={true}>
-                <Paper sx={{ p: 3 }}>
+                <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                     <DownloadIcon color="primary" sx={{ fontSize: 32 }} />
                     <Box>
@@ -812,11 +814,14 @@ const DocumentList = ({ requiredDocuments, uploadedDocuments, onUpload, onDelete
                       border: 1,
                       borderColor: status === 'uploaded' ? 'success.main' : 
                                   status === 'uploading' ? 'warning.main' : 'divider',
-                      boxShadow: status === 'uploaded' ? 2 : 0,
+                      boxShadow: status === 'uploaded' ? 3 : 1,
+                      borderRadius: 2,
                       transition: 'all 0.3s',
                       '&:hover': {
-                        boxShadow: 3,
-                        transform: 'translateY(-2px)'
+                        boxShadow: status === 'uploaded' ? 4 : 3,
+                        transform: 'translateY(-4px)',
+                        borderColor: status === 'uploaded' ? 'success.dark' : 
+                                    status === 'uploading' ? 'warning.dark' : 'primary.main'
                       }
                     }}
                   >
@@ -862,9 +867,10 @@ const DocumentList = ({ requiredDocuments, uploadedDocuments, onUpload, onDelete
                           <Button
                             size="small"
                             color="error"
+                            variant="outlined"
                             onClick={() => {
-                              const doc = uploadedDocuments.find(d => d.document_type === doc.document_type)
-                              if (doc) onDelete(doc)
+                              const uploadedDoc = uploadedDocuments.find(d => d.document_type === doc.document_type)
+                              if (uploadedDoc) onDelete(uploadedDoc)
                             }}
                           >
                             Delete
@@ -887,6 +893,14 @@ const DocumentList = ({ requiredDocuments, uploadedDocuments, onUpload, onDelete
                           fullWidth
                           startIcon={<CloudUploadIcon />}
                           onClick={() => onUpload(doc.document_type)}
+                          sx={{
+                            fontWeight: 600,
+                            boxShadow: 2,
+                            '&:hover': {
+                              boxShadow: 4,
+                              transform: 'scale(1.02)'
+                            }
+                          }}
                         >
                           Upload
                         </Button>
