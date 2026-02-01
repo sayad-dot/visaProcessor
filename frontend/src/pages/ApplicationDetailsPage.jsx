@@ -225,10 +225,15 @@ const ApplicationDetailsPage = () => {
     
     toast.success('✅ Analysis complete! Score: 98%')
     
+    // Show 80% storage warning after analysis
+    setTimeout(() => {
+      toast.warning('⚠️ Storage at 80% capacity!', { autoClose: 4000 })
+    }, 1000)
+    
     // Auto-open questionnaire after delay
     setTimeout(() => {
       setQuestionnaireOpen(true)
-    }, 1500)
+    }, 2000)
   }
 
   const handleQuestionnaireComplete = () => {
@@ -251,31 +256,39 @@ const ApplicationDetailsPage = () => {
     
     setDownloadProgress({ open: true, current: 0, total: files.length, error: null, files: [] })
     
-    for (let i = 0; i < files.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 1200))
-      
-      setDownloadProgress(prev => ({
-        ...prev,
-        current: i + 1,
-        files: [...prev.files, files[i]]
-      }))
-      
-      toast.info(`📄 Generating: ${files[i]}`)
-      
-      // After 2 files, show storage/runtime error
-      if (i === 1) {
-        await new Promise(resolve => setTimeout(resolve, 800))
-        setDownloadProgress({
-          open: true,
-          current: 2,
-          total: files.length,
-          error: '❌ Database storage limit exceeded! Runtime error: Cannot allocate memory for remaining document generation.',
-          files: [files[0], files[1]]
-        })
-        toast.error('💥 Storage limit exceeded!', { autoClose: false })
-        return
-      }
-    }
+    // Generate first file
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    setDownloadProgress({
+      open: true,
+      current: 1,
+      total: files.length,
+      files: [files[0]]
+    })
+    
+    toast.success(`✅ Downloaded: ${files[0]}`)
+    
+    // After 1 file, show storage error
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    setDownloadProgress({
+      open: true,
+      current: 1,
+      total: files.length,
+      error: '❌ ERROR 503: Storage limit exceeded! Database storage full. Cannot generate remaining documents. System resources exhausted.',
+      files: [files[0]]
+    })
+    
+    toast.error('💥 Storage limit exceeded!', { autoClose: false })
+    
+    // Redirect to homepage after 3 seconds
+    setTimeout(() => {
+      setDownloadProgress({ open: false, current: 0, total: 0, error: null, files: [] })
+      toast.info('Redirecting to homepage...')
+      setTimeout(() => {
+        navigate('/')
+      }, 1000)
+    }, 3000)
   }
 
   const getStatusColor = (status) => {
@@ -334,18 +347,23 @@ const ApplicationDetailsPage = () => {
           <Alert 
             severity={storageUsed >= 5 ? "warning" : "info"} 
             sx={{ mb: 3 }}
-            icon={storageUsed >= 5 ? <WarningIcon /> : undefined}
+            icon={storageUsed >= 5 ? <WarningIcon /> : <StorageIcon />}
           >
             <Box>
               <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                Storage Usage: {storageUsed} / 10 documents ({(storageUsed * 10).toFixed(0)}%)
+                Storage Usage: {storageUsed} / 15 documents ({((storageUsed / 15) * 100).toFixed(0)}%)
               </Typography>
               <LinearProgress 
                 variant="determinate" 
-                value={storageUsed * 10} 
+                value={(storageUsed / 15) * 100} 
                 color={storageUsed >= 5 ? "warning" : "primary"}
                 sx={{ height: 6, borderRadius: 1 }}
               />
+              {storageUsed >= 5 && (
+                <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
+                  {storageUsed === 5 ? '⚠️ 50% storage capacity reached' : '⚠️ High storage usage'}
+                </Typography>
+              )}
             </Box>
           </Alert>
         )}
@@ -595,10 +613,10 @@ const ApplicationDetailsPage = () => {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body1">
-            You have reached 50% of your storage limit ({storageUsed}/10 documents).
+            You have reached 50% of your storage limit ({storageUsed}/15 documents).
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Please consider deleting unnecessary documents or upgrading your plan.
+            Please be mindful of storage usage. System may experience limitations.
           </Typography>
         </DialogContent>
         <DialogActions>

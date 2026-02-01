@@ -41,24 +41,48 @@ export const mockApi = {
   // Required Documents
   async getRequiredDocuments(applicationId) {
     await delay(300);
-    return [
-      { id: 1, document_type: 'passport', category: 'identity', is_required: true, description: 'Valid passport (at least 6 months validity)' },
-      { id: 2, document_type: 'passport_photo', category: 'identity', is_required: true, description: 'Recent passport-sized photo' },
-      { id: 3, document_type: 'visa_application_form', category: 'application', is_required: true, description: 'Completed visa application form' },
-      { id: 4, document_type: 'travel_itinerary', category: 'travel', is_required: false, description: 'Detailed travel itinerary' },
-      { id: 5, document_type: 'hotel_booking', category: 'travel', is_required: false, description: 'Hotel reservation confirmations' },
-      { id: 6, document_type: 'flight_booking', category: 'travel', is_required: false, description: 'Flight ticket reservations' },
-      { id: 7, document_type: 'bank_statement', category: 'financial', is_required: true, description: 'Last 6 months bank statements' },
-      { id: 8, document_type: 'salary_slips', category: 'financial', is_required: false, description: 'Recent salary slips (3 months)' },
-      { id: 9, document_type: 'employment_certificate', category: 'financial', is_required: false, description: 'Employment verification letter' },
-      { id: 10, document_type: 'tax_returns', category: 'financial', is_required: false, description: 'Tax return documents' },
-      { id: 11, document_type: 'property_documents', category: 'assets', is_required: false, description: 'Property ownership documents' },
-      { id: 12, document_type: 'business_license', category: 'assets', is_required: false, description: 'Business registration documents' },
-      { id: 13, document_type: 'cover_letter', category: 'application', is_required: false, description: 'Purpose of visit cover letter' },
-      { id: 14, document_type: 'travel_insurance', category: 'travel', is_required: true, description: 'Travel health insurance' },
-      { id: 15, document_type: 'invitation_letter', category: 'support', is_required: false, description: 'Invitation letter (if applicable)' },
-      { id: 16, document_type: 'previous_visas', category: 'travel', is_required: false, description: 'Copies of previous visas' }
+    const app = mockApplications.find(a => a.id === parseInt(applicationId));
+    const professionType = app?.profession_type || 'Job';
+    
+    // Documents for Job profession
+    const jobDocuments = [
+      { id: 1, document_type: 'passport_copy', category: 'identity', is_required: true, description: 'Passport copy (PDF)' },
+      { id: 2, document_type: 'visa_history', category: 'travel', is_required: true, description: 'Visa history copies (PDF)' },
+      { id: 3, document_type: 'nid_english', category: 'identity', is_required: true, description: 'NID English translated copy (PDF)' },
+      { id: 4, document_type: 'job_noc', category: 'employment', is_required: true, description: 'Job NOC (PDF)' },
+      { id: 5, document_type: 'tin', category: 'financial', is_required: true, description: 'TIN certificate (PDF)' },
+      { id: 6, document_type: 'visiting_card', category: 'employment', is_required: true, description: 'Visiting card (PDF)' },
+      { id: 7, document_type: 'job_id_card', category: 'employment', is_required: true, description: 'Job ID card (PDF/Image)' },
+      { id: 8, document_type: 'payslip_6months', category: 'financial', is_required: true, description: 'Payslip of last 6 months salary (PDF)' },
+      { id: 9, document_type: 'cover_letter', category: 'application', is_required: true, description: 'Cover letter (PDF)' },
+      { id: 10, document_type: 'travel_itinerary', category: 'travel', is_required: true, description: 'Travel itinerary (PDF)' },
+      { id: 11, document_type: 'travel_history', category: 'travel', is_required: true, description: 'Travel history (PDF)' },
+      { id: 12, document_type: 'air_ticket_booking', category: 'travel', is_required: true, description: 'Air ticket booking (PDF)' },
+      { id: 13, document_type: 'hotel_booking', category: 'travel', is_required: true, description: 'Hotel booking (PDF)' },
+      { id: 14, document_type: 'savings_bank_statement', category: 'financial', is_required: true, description: 'Savings account bank statement (last 6 months)' },
+      { id: 15, document_type: 'savings_solvency', category: 'financial', is_required: true, description: 'Savings account bank solvency certificate' }
     ];
+    
+    // Documents for Business profession
+    const businessDocuments = [
+      { id: 1, document_type: 'passport_copy', category: 'identity', is_required: true, description: 'Passport copy (PDF)' },
+      { id: 2, document_type: 'visa_history', category: 'travel', is_required: true, description: 'Visa history copies (PDF)' },
+      { id: 3, document_type: 'nid_english', category: 'identity', is_required: true, description: 'NID English translated copy (PDF)' },
+      { id: 4, document_type: 'trade_license', category: 'business', is_required: true, description: 'Trade license English translated (PDF)' },
+      { id: 5, document_type: 'tin', category: 'financial', is_required: true, description: 'TIN certificate (PDF)' },
+      { id: 6, document_type: 'visiting_card', category: 'business', is_required: true, description: 'Visiting card (PDF)' },
+      { id: 7, document_type: 'cover_letter', category: 'application', is_required: true, description: 'Cover letter (PDF)' },
+      { id: 8, document_type: 'travel_itinerary', category: 'travel', is_required: true, description: 'Travel itinerary (PDF)' },
+      { id: 9, document_type: 'travel_history', category: 'travel', is_required: true, description: 'Travel history (PDF)' },
+      { id: 10, document_type: 'air_ticket_booking', category: 'travel', is_required: true, description: 'Air ticket booking (PDF)' },
+      { id: 11, document_type: 'hotel_booking', category: 'travel', is_required: true, description: 'Hotel booking (PDF)' },
+      { id: 12, document_type: 'current_bank_statement', category: 'financial', is_required: true, description: 'Current/Business account bank statement (last 6 months)' },
+      { id: 13, document_type: 'current_solvency', category: 'financial', is_required: true, description: 'Current/Business account bank solvency certificate' },
+      { id: 14, document_type: 'savings_bank_statement', category: 'financial', is_required: true, description: 'Savings account bank statement (last 6 months)' },
+      { id: 15, document_type: 'savings_solvency', category: 'financial', is_required: true, description: 'Savings account bank solvency certificate' }
+    ];
+    
+    return professionType === 'Business' ? businessDocuments : jobDocuments;
   },
 
   // Documents

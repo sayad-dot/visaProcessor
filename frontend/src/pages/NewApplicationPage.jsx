@@ -23,6 +23,7 @@ const NewApplicationPage = () => {
     applicant_phone: '',
     country: 'Iceland',
     visa_type: 'Tourist',
+    profession_type: 'Job',
   })
   const [loading, setLoading] = useState(false)
 
@@ -118,6 +119,20 @@ const NewApplicationPage = () => {
                 label="Visa Type"
               >
                 <MenuItem value="Tourist">Tourist Visa</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Profession Type</InputLabel>
+              <Select
+                name="profession_type"
+                value={formData.profession_type}
+                onChange={handleChange}
+                label="Profession Type"
+                required
+              >
+                <MenuItem value="Job">Job (Employed)</MenuItem>
+                <MenuItem value="Business">Business Owner</MenuItem>
               </Select>
             </FormControl>
             
