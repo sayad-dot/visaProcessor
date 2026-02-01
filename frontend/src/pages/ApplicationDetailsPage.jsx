@@ -22,8 +22,8 @@ import { applicationService, documentService } from '../services/apiService'
 import ProgressTracker from '../components/ProgressTracker'
 import DocumentList from '../components/DocumentList'
 import DocumentUploader from '../components/DocumentUploader'
-import AnalysisSection from '../components/AnalysisSection'
-import QuestionnaireWizard from '../components/QuestionnaireWizard'
+import AnalysisSection from '../components/AnalysisSection_Demo';
+import QuestionnaireWizard from '../components/QuestionnaireWizard_Demo';
 import GenerationSection from '../components/GenerationSection'
 
 const ApplicationDetailsPage = () => {
