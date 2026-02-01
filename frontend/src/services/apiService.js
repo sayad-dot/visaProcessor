@@ -36,24 +36,24 @@ export const applicationService = {
   // Get required documents for application
   getRequiredDocuments: async (id) => {
     if (DEMO_MODE) {
-      // Return all 16 document types
+      // Return all 16 document types with proper document_type field
       return [
-        { id: 1, name: 'Passport', type: 'passport', is_mandatory: true, is_uploaded: false },
-        { id: 2, name: 'Bank Statement', type: 'bank_statement', is_mandatory: true, is_uploaded: false },
-        { id: 3, name: 'Employment Certificate', type: 'employment_certificate', is_mandatory: true, is_uploaded: false },
-        { id: 4, name: 'Photo', type: 'photo', is_mandatory: false, is_uploaded: false },
-        { id: 5, name: 'Travel History', type: 'travel_history', is_mandatory: false, is_uploaded: false },
-        { id: 6, name: 'Cover Letter', type: 'cover_letter', is_mandatory: false, is_uploaded: false },
-        { id: 7, name: 'Travel Itinerary', type: 'travel_itinerary', is_mandatory: false, is_uploaded: false },
-        { id: 8, name: 'Financial Documents', type: 'financial_documents', is_mandatory: false, is_uploaded: false },
-        { id: 9, name: 'Home Ties Statement', type: 'home_ties', is_mandatory: false, is_uploaded: false },
-        { id: 10, name: 'Asset Valuation', type: 'asset_valuation', is_mandatory: false, is_uploaded: false },
-        { id: 11, name: 'Previous Travel History', type: 'previous_travel', is_mandatory: false, is_uploaded: false },
-        { id: 12, name: 'Air Ticket', type: 'air_ticket', is_mandatory: false, is_uploaded: false },
-        { id: 13, name: 'Hotel Booking', type: 'hotel_booking', is_mandatory: false, is_uploaded: false },
-        { id: 14, name: 'TIN Certificate', type: 'tin_certificate', is_mandatory: false, is_uploaded: false },
-        { id: 15, name: 'Trade License', type: 'trade_license', is_mandatory: false, is_uploaded: false },
-        { id: 16, name: 'Tax Certificate', type: 'tax_certificate', is_mandatory: false, is_uploaded: false }
+        { id: 1, name: 'Passport', document_type: 'passport', is_mandatory: true, is_uploaded: false, can_be_generated: false },
+        { id: 2, name: 'Bank Statement', document_type: 'bank_statement', is_mandatory: true, is_uploaded: false, can_be_generated: false },
+        { id: 3, name: 'Employment Certificate', document_type: 'employment_certificate', is_mandatory: true, is_uploaded: false, can_be_generated: false },
+        { id: 4, name: 'Photo', document_type: 'photo', is_mandatory: false, is_uploaded: false, can_be_generated: false },
+        { id: 5, name: 'Travel History', document_type: 'travel_history', is_mandatory: false, is_uploaded: false, can_be_generated: false },
+        { id: 6, name: 'Cover Letter', document_type: 'cover_letter', is_mandatory: false, is_uploaded: false, can_be_generated: true },
+        { id: 7, name: 'Travel Itinerary', document_type: 'travel_itinerary', is_mandatory: false, is_uploaded: false, can_be_generated: true },
+        { id: 8, name: 'Financial Documents', document_type: 'financial_documents', is_mandatory: false, is_uploaded: false, can_be_generated: true },
+        { id: 9, name: 'Home Ties Statement', document_type: 'home_ties', is_mandatory: false, is_uploaded: false, can_be_generated: true },
+        { id: 10, name: 'Asset Valuation', document_type: 'asset_valuation', is_mandatory: false, is_uploaded: false, can_be_generated: true },
+        { id: 11, name: 'Previous Travel History', document_type: 'previous_travel', is_mandatory: false, is_uploaded: false, can_be_generated: true },
+        { id: 12, name: 'Air Ticket', document_type: 'air_ticket', is_mandatory: false, is_uploaded: false, can_be_generated: true },
+        { id: 13, name: 'Hotel Booking', document_type: 'hotel_booking', is_mandatory: false, is_uploaded: false, can_be_generated: true },
+        { id: 14, name: 'TIN Certificate', document_type: 'tin_certificate', is_mandatory: false, is_uploaded: false, can_be_generated: false },
+        { id: 15, name: 'Trade License', document_type: 'trade_license', is_mandatory: false, is_uploaded: false, can_be_generated: false },
+        { id: 16, name: 'Tax Certificate', document_type: 'tax_certificate', is_mandatory: false, is_uploaded: false, can_be_generated: false }
       ]
     }
     const response = await api.get(`/applications/${id}/required-documents`)

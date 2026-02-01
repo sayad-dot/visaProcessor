@@ -12,19 +12,37 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
-  Alert
+  Alert,
+  LinearProgress,
+  Snackbar,
+  Card,
+  CardContent,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Stack,
+  Fade,
+  Slide,
+  Grow
 } from '@mui/material'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import UploadIcon from '@mui/icons-material/Upload'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
+import WarningIcon from '@mui/icons-material/Warning'
+import ErrorIcon from '@mui/icons-material/Error'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import DescriptionIcon from '@mui/icons-material/Description'
+import StorageIcon from '@mui/icons-material/Storage'
+import DownloadIcon from '@mui/icons-material/Download'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile'
 import { applicationService, documentService } from '../services/apiService'
 import ProgressTracker from '../components/ProgressTracker'
-import DocumentList from '../components/DocumentList'
 import DocumentUploader from '../components/DocumentUploader'
-import AnalysisSection from '../components/AnalysisSection_Demo';
-import QuestionnaireWizard from '../components/QuestionnaireWizard_Demo';
-import GenerationSection from '../components/GenerationSection'
+import QuestionnaireWizard from '../components/QuestionnaireWizard_Demo'
 
 const ApplicationDetailsPage = () => {
   const { id } = useParams()
@@ -35,9 +53,17 @@ const ApplicationDetailsPage = () => {
   const [loading, setLoading] = useState(true)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [selectedDocumentType, setSelectedDocumentType] = useState(null)
-  const [processing, setProcessing] = useState(false)
   const [questionnaireOpen, setQuestionnaireOpen] = useState(false)
-  const [analysisComplete, setAnalysisComplete] = useState(false)
+  const [showGenerateButton, setShowGenerateButton] = useState(false)
+  
+  // Demo-specific states
+  const [uploadingDocuments, setUploadingDocuments] = useState({})
+  const [storageUsed, setStorageUsed] = useState(0)
+  const [showStorageWarning, setShowStorageWarning] = useState(false)
+  const [analyzingProgress, setAnalyzingProgress] = useState(0)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisResults, setAnalysisResults] = useState(null)
+  const [downloadProgress, setDownloadProgress] = useState({ open: false, current: 0, total: 0, error: null, files: [] })
 
   useEffect(() => {
     fetchApplicationData()
@@ -51,23 +77,17 @@ const ApplicationDetailsPage = () => {
       const appData = await applicationService.getApplication(id)
       setApplication(appData)
       
-      // Fetch required documents - use applicationService method
+      // Fetch required documents
       const reqDocs = await applicationService.getRequiredDocuments(id)
       setRequiredDocuments(reqDocs)
       
-      // Fetch uploaded documents
+      // Fetch uploaded documents (empty initially for demo)
       const uploadedDocs = await documentService.getApplicationDocuments(id)
       setUploadedDocuments(uploadedDocs)
       
     } catch (error) {
       console.error('Error loading data:', error)
-      // Set empty arrays so UI still renders
-      if (!requiredDocuments.length) {
-        setRequiredDocuments([])
-      }
-      if (!uploadedDocuments.length) {
-        setUploadedDocuments([])
-      }
+      toast.error('Failed to load application data')
     } finally {
       setLoading(false)
     }
@@ -78,91 +98,192 @@ const ApplicationDetailsPage = () => {
     setUploadDialogOpen(true)
   }
 
-  const handleUploadSuccess = async (uploadedDoc) => {
-    toast.success('Document uploaded successfully!')
-    setUploadDialogOpen(false)
+  const simulateUpload = async (file, documentType) => {
+    const docName = documentType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
     
-    // Refresh uploaded documents
-    try {
-      const uploadedDocs = await documentService.getApplicationDocuments(id)
-      setUploadedDocuments(uploadedDocs)
-    } catch (error) {
-      console.error('Error refreshing documents:', error)
+    // Initialize uploading state
+    setUploadingDocuments(prev => ({
+      ...prev,
+      [documentType]: { uploading: true, progress: 0, status: 'Uploading...' }
+    }))
+
+    // Upload phase (0-60%)
+    for (let i = 0; i <= 60; i += 5) {
+      await new Promise(resolve => setTimeout(resolve, 80))
+      setUploadingDocuments(prev => ({
+        ...prev,
+        [documentType]: { uploading: true, progress: i, status: 'Uploading...' }
+      }))
     }
+
+    // Extracting phase (60-100%)
+    setUploadingDocuments(prev => ({
+      ...prev,
+      [documentType]: { uploading: true, progress: 60, status: 'Extracting text...' }
+    }))
+    
+    for (let i = 65; i <= 100; i += 5) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      setUploadingDocuments(prev => ({
+        ...prev,
+        [documentType]: { uploading: true, progress: i, status: 'Extracting text...' }
+      }))
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Add to uploaded documents
+    const newDoc = {
+      id: Date.now(),
+      document_type: documentType,
+      file_name: file.name,
+      uploaded_at: new Date().toISOString(),
+      extraction_status: 'completed'
+    }
+    
+    setUploadedDocuments(prev => [...prev, newDoc])
+    
+    // Update storage
+    const newStorage = storageUsed + 1
+    setStorageUsed(newStorage)
+    
+    // Show storage warning at 50%
+    if (newStorage === 5) {
+      setTimeout(() => {
+        setShowStorageWarning(true)
+      }, 500)
+    }
+    
+    // Clear uploading state
+    setUploadingDocuments(prev => {
+      const newState = { ...prev }
+      delete newState[documentType]
+      return newState
+    })
+    
+    toast.success(`${docName} uploaded successfully!`)
+  }
+
+  const handleUploadSuccess = async (file) => {
+    setUploadDialogOpen(false)
+    await simulateUpload(file, selectedDocumentType)
   }
 
   const handleUploadError = (error) => {
     toast.error(error.message || 'Upload failed')
+    setUploadDialogOpen(false)
   }
 
   const handleDeleteDocument = async (document) => {
-    if (!window.confirm(`Are you sure you want to delete ${document.document_name}?`)) {
+    const docName = document.document_type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    
+    if (!window.confirm(`Delete ${docName}?`)) {
       return
     }
 
-    try {
-      await documentService.deleteDocument(document.id)
-      toast.success('Document deleted successfully')
-      
-      // Refresh uploaded documents
-      const uploadedDocs = await documentService.getApplicationDocuments(id)
-      setUploadedDocuments(uploadedDocs)
-    } catch (error) {
-      toast.error('Failed to delete document')
-      console.error(error)
-    }
+    setUploadedDocuments(prev => prev.filter(doc => doc.id !== document.id))
+    setStorageUsed(prev => Math.max(0, prev - 1))
+    toast.success(`${docName} deleted`)
   }
 
-  const handleViewDocument = (document) => {
-    // Open document in new tab
-    window.open(`http://localhost:8000${document.file_path}`, '_blank')
-  }
-
-  const handleProcessDocuments = async () => {
+  const handleAnalyzeDocuments = async () => {
     if (uploadedDocuments.length === 0) {
-      toast.warning('Please upload documents before processing')
+      toast.warning('Please upload at least one document')
       return
     }
 
-    if (!window.confirm('This will analyze all uploaded documents. Continue?')) {
-      return
-    }
+    setIsAnalyzing(true)
+    setAnalyzingProgress(0)
 
-    try {
-      setProcessing(true)
-      await documentService.processDocuments(id)
-      toast.success('Documents processed successfully!')
+    toast.info('🔍 Starting analysis...')
+    
+    // Extraction and analysis (0-98%)
+    for (let i = 0; i <= 98; i += 2) {
+      await new Promise(resolve => setTimeout(resolve, 60))
+      setAnalyzingProgress(i)
       
-      // Refresh application data
-      await fetchApplicationData()
-    } catch (error) {
-      toast.error('Failed to process documents')
-      console.error(error)
-    } finally {
-      setProcessing(false)
+      if (i === 20) {
+        toast.info('📄 Reading documents...')
+      } else if (i === 50) {
+        toast.info('✨ Extracting text...')
+      } else if (i === 80) {
+        toast.info('🔍 Analyzing quality...')
+      }
     }
-  }
 
-  const handleAnalysisComplete = (data) => {
-    setAnalysisComplete(true)
-    toast.success('Analysis complete! You can now fill the questionnaire.')
-    // Optionally open questionnaire automatically
+    await new Promise(resolve => setTimeout(resolve, 500))
+    setAnalyzingProgress(100)
+    
+    await new Promise(resolve => setTimeout(resolve, 800))
+    
+    setIsAnalyzing(false)
+    setAnalysisResults({
+      score: 98,
+      extracted: uploadedDocuments.length,
+      total: requiredDocuments.length
+    })
+    
+    toast.success('✅ Analysis complete! Score: 98%')
+    
+    // Auto-open questionnaire after delay
     setTimeout(() => {
       setQuestionnaireOpen(true)
-    }, 1000)
+    }, 1500)
   }
 
   const handleQuestionnaireComplete = () => {
-    toast.success('Questionnaire completed! Ready for document generation.')
-    fetchApplicationData()
+    toast.success('✅ Questionnaire completed!')
+    setQuestionnaireOpen(false)
+    setShowGenerateButton(true)
+  }
+
+  const handleGenerateDocuments = async () => {
+    const files = [
+      'Cover Letter.pdf',
+      'Travel Itinerary.pdf',
+      'Financial Statement.pdf',
+      'Home Ties Declaration.pdf',
+      'Asset Valuation.pdf',
+      'Travel History.pdf',
+      'Air Ticket Booking.pdf',
+      'Hotel Reservation.pdf'
+    ]
+    
+    setDownloadProgress({ open: true, current: 0, total: files.length, error: null, files: [] })
+    
+    for (let i = 0; i < files.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 1200))
+      
+      setDownloadProgress(prev => ({
+        ...prev,
+        current: i + 1,
+        files: [...prev.files, files[i]]
+      }))
+      
+      toast.info(`📄 Generating: ${files[i]}`)
+      
+      // After 2 files, show storage/runtime error
+      if (i === 1) {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        setDownloadProgress({
+          open: true,
+          current: 2,
+          total: files.length,
+          error: '❌ Database storage limit exceeded! Runtime error: Cannot allocate memory for remaining document generation.',
+          files: [files[0], files[1]]
+        })
+        toast.error('💥 Storage limit exceeded!', { autoClose: false })
+        return
+      }
+    }
   }
 
   const getStatusColor = (status) => {
     const colors = {
       draft: 'default',
+      pending: 'warning',
       documents_uploaded: 'info',
       analyzing: 'warning',
-      generating: 'warning',
       completed: 'success',
       failed: 'error',
     }
@@ -193,20 +314,7 @@ const ApplicationDetailsPage = () => {
   }
 
   const uploadedCount = uploadedDocuments.length
-  
-  // Count only MANDATORY documents (not optional, not AI-generated)
-  const mandatoryDocuments = requiredDocuments.filter(doc => 
-    doc.is_mandatory === true && doc.can_be_generated === false
-  )
-  const requiredCount = mandatoryDocuments.length
-  
-  // Count how many mandatory documents have been uploaded
-  const uploadedMandatoryCount = mandatoryDocuments.filter(reqDoc => 
-    uploadedDocuments.some(upDoc => upDoc.document_type === reqDoc.document_type)
-  ).length
-  
-  // All mandatory documents uploaded
-  const allDocumentsUploaded = uploadedMandatoryCount === requiredCount && requiredCount > 0
+  const requiredCount = requiredDocuments.filter(doc => doc.is_mandatory && !doc.can_be_generated).length
 
   return (
     <Container maxWidth="lg">
@@ -220,6 +328,27 @@ const ApplicationDetailsPage = () => {
             Back to Applications
           </Button>
         </Box>
+
+        {/* Storage Warning Bar */}
+        {storageUsed > 0 && (
+          <Alert 
+            severity={storageUsed >= 5 ? "warning" : "info"} 
+            sx={{ mb: 3 }}
+            icon={storageUsed >= 5 ? <WarningIcon /> : undefined}
+          >
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                Storage Usage: {storageUsed} / 10 documents ({(storageUsed * 10).toFixed(0)}%)
+              </Typography>
+              <LinearProgress 
+                variant="determinate" 
+                value={storageUsed * 10} 
+                color={storageUsed >= 5 ? "warning" : "primary"}
+                sx={{ height: 6, borderRadius: 1 }}
+              />
+            </Box>
+          </Alert>
+        )}
 
         {/* Progress Tracker */}
         <ProgressTracker
@@ -276,39 +405,6 @@ const ApplicationDetailsPage = () => {
                       {application.visa_type}
                     </Typography>
                   </Grid>
-                  
-                  {application.applicant_name && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Applicant Name
-                      </Typography>
-                      <Typography variant="body1">
-                        {application.applicant_name}
-                      </Typography>
-                    </Grid>
-                  )}
-                  
-                  {application.applicant_email && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Email
-                      </Typography>
-                      <Typography variant="body1">
-                        {application.applicant_email}
-                      </Typography>
-                    </Grid>
-                  )}
-                  
-                  {application.applicant_phone && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Phone
-                      </Typography>
-                      <Typography variant="body1">
-                        {application.applicant_phone}
-                      </Typography>
-                    </Grid>
-                  )}
                 </Grid>
               </Box>
             </Paper>
@@ -323,62 +419,142 @@ const ApplicationDetailsPage = () => {
                 </Typography>
                 <Button
                   variant="contained"
-                  startIcon={processing ? <CircularProgress size={20} color="inherit" /> : <AnalyticsIcon />}
-                  onClick={handleProcessDocuments}
-                  disabled={!allDocumentsUploaded || processing}
+                  startIcon={isAnalyzing ? <CircularProgress size={20} color="inherit" /> : <AnalyticsIcon />}
+                  onClick={handleAnalyzeDocuments}
+                  disabled={uploadedCount === 0 || isAnalyzing}
                 >
-                  {processing ? 'Processing...' : 'Analyze Documents'}
+                  {isAnalyzing ? `Analyzing... ${analyzingProgress}%` : 'Analyze Documents'}
                 </Button>
               </Box>
+              
+              {/* Analyzing Progress Bar */}
+              {isAnalyzing && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Extracting and analyzing documents...
+                  </Typography>
+                  <LinearProgress variant="determinate" value={analyzingProgress} sx={{ height: 8, borderRadius: 1 }} />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                    {analyzingProgress < 30 ? 'Reading documents...' : 
+                     analyzingProgress < 70 ? 'Extracting text...' : 
+                     analyzingProgress < 90 ? 'Analyzing quality...' : 
+                     'Finalizing results...'}
+                  </Typography>
+                </Box>
+              )}
               
               <DocumentList
                 requiredDocuments={requiredDocuments}
                 uploadedDocuments={uploadedDocuments}
                 onUpload={handleUploadClick}
                 onDelete={handleDeleteDocument}
-                onView={handleViewDocument}
+                uploadingDocuments={uploadingDocuments}
               />
             </Paper>
           </Grid>
 
-          {/* Analysis Section - Always show for demo */}
-          <Grid item xs={12}>
-            <AnalysisSection
-              applicationId={id}
-              uploadedDocuments={uploadedDocuments}
-              onAnalysisComplete={handleAnalysisComplete}
-            />
-          </Grid>
-
-          {/* Questionnaire Button - Show only if analysis complete */}
-          {analysisComplete && (
+          {/* Analysis Section */}
+          {analysisResults && !isAnalyzing && (
             <Grid item xs={12}>
-              <Paper sx={{ p: 3, textAlign: 'center' }}>
-                <Typography variant="h6" gutterBottom>
-                  Next Step: Complete Questionnaire
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Please answer the questions to provide additional information for your visa application.
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  onClick={() => setQuestionnaireOpen(true)}
-                >
-                  Fill Questionnaire
-                </Button>
-              </Paper>
+              <Grow in={true}>
+                <Paper sx={{ p: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <CheckCircleIcon sx={{ fontSize: 48 }} />
+                    <Box>
+                      <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                        Analysis Complete!
+                      </Typography>
+                      <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                        Documents successfully processed with high confidence
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.3)' }} />
+                  
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h2" sx={{ fontWeight: 700 }}>
+                          {analysisResults.score}%
+                        </Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                          Extraction Score
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h2" sx={{ fontWeight: 700 }}>
+                          {analysisResults.extracted}
+                        </Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                          Documents Processed
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h2" sx={{ fontWeight: 700 }}>
+                          {analysisResults.total}
+                        </Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                          Total Required
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                  
+                  <Button
+                    variant="contained"
+                    size="large"
+                    fullWidth
+                    onClick={() => setQuestionnaireOpen(true)}
+                    sx={{ 
+                      mt: 3, 
+                      bgcolor: 'white', 
+                      color: '#667eea',
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
+                      fontWeight: 600,
+                      py: 1.5
+                    }}
+                  >
+                    📋 Fill Questionnaire
+                  </Button>
+                </Paper>
+              </Grow>
             </Grid>
           )}
 
-          {/* Document Generation Section - Show after questionnaire */}
-          {analysisComplete && (
+          {/* Document Generation Section */}
+          {showGenerateButton && (
             <Grid item xs={12}>
-              <GenerationSection 
-                applicationId={id} 
-                applicantName={application?.applicant_name || ''}
-              />
+              <Grow in={true}>
+                <Paper sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <DownloadIcon color="primary" sx={{ fontSize: 32 }} />
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        Generate Visa Documents
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Create professional documents based on your analysis and responses
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    size="large"
+                    onClick={handleGenerateDocuments}
+                    disabled={downloadProgress.open}
+                    startIcon={<DownloadIcon />}
+                    sx={{ fontWeight: 600 }}
+                  >
+                    Generate & Download All Documents
+                  </Button>
+                </Paper>
+              </Grow>
             </Grid>
           )}
         </Grid>
@@ -392,7 +568,7 @@ const ApplicationDetailsPage = () => {
         fullWidth
       >
         <DialogTitle>
-          Upload Document: {selectedDocumentType?.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+          Upload: {selectedDocumentType?.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
@@ -405,13 +581,128 @@ const ApplicationDetailsPage = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)}>
-            Close
+          <Button onClick={() => setUploadDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Storage Warning Dialog */}
+      <Dialog open={showStorageWarning} onClose={() => setShowStorageWarning(false)}>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningIcon color="warning" />
+            Storage Warning
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            You have reached 50% of your storage limit ({storageUsed}/10 documents).
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Please consider deleting unnecessary documents or upgrading your plan.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowStorageWarning(false)} color="primary">
+            OK
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Questionnaire Wizard Dialog */}
+      {/* Download Progress Dialog */}
+      <Dialog open={downloadProgress.open} onClose={() => {}} disableEscapeKeyDown maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>
+          {downloadProgress.error ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+              <ErrorIcon />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Generation Failed
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={24} />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Generating Documents...
+              </Typography>
+            </Box>
+          )}
+        </DialogTitle>
+        <DialogContent>
+          {downloadProgress.error ? (
+            <Box>
+              <Alert severity="error" sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  {downloadProgress.error}
+                </Typography>
+                <Typography variant="caption">
+                  Successfully generated {downloadProgress.current} of {downloadProgress.total} documents before failure.
+                </Typography>
+              </Alert>
+              
+              {downloadProgress.files.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                    Generated Files:
+                  </Typography>
+                  <List dense>
+                    {downloadProgress.files.map((file, index) => (
+                      <ListItem key={index}>
+                        <ListItemIcon>
+                          <CheckCircleIcon color="success" fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary={file} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                Generating file {downloadProgress.current} of {downloadProgress.total}...
+              </Typography>
+              <LinearProgress 
+                variant="determinate" 
+                value={(downloadProgress.current / downloadProgress.total) * 100} 
+                sx={{ height: 10, borderRadius: 1, mb: 2 }}
+              />
+              
+              {downloadProgress.files.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Generated files:
+                  </Typography>
+                  <List dense>
+                    {downloadProgress.files.map((file, index) => (
+                      <ListItem key={index} sx={{ py: 0.5 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <CheckCircleIcon color="success" fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={file} 
+                          primaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDownloadProgress({ open: false, current: 0, total: 0, error: null, files: [] })}
+            color="primary"
+            variant={downloadProgress.error ? "contained" : "outlined"}
+          >
+            {downloadProgress.error ? 'Close' : 'Cancel'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Questionnaire Dialog */}
       <QuestionnaireWizard
         open={questionnaireOpen}
         onClose={() => setQuestionnaireOpen(false)}
@@ -419,6 +710,158 @@ const ApplicationDetailsPage = () => {
         onComplete={handleQuestionnaireComplete}
       />
     </Container>
+  )
+}
+
+// Document List Component with beautiful UI
+const DocumentList = ({ requiredDocuments, uploadedDocuments, onUpload, onDelete, uploadingDocuments }) => {
+  const getDocumentStatus = (docType) => {
+    const isUploaded = uploadedDocuments.some(doc => doc.document_type === docType)
+    const isUploading = uploadingDocuments[docType]
+    
+    if (isUploading) return 'uploading'
+    if (isUploaded) return 'uploaded'
+    return 'pending'
+  }
+  
+  const getCategoryColor = (category) => {
+    const colors = {
+      identity: '#1976d2',
+      application: '#9c27b0',
+      travel: '#2e7d32',
+      financial: '#ed6c02',
+      assets: '#0288d1',
+      support: '#d32f2f'
+    }
+    return colors[category] || '#757575'
+  }
+
+  const groupedDocuments = requiredDocuments.reduce((acc, doc) => {
+    if (!acc[doc.category]) acc[doc.category] = []
+    acc[doc.category].push(doc)
+    return acc
+  }, {})
+
+  return (
+    <Box>
+      {Object.entries(groupedDocuments).map(([category, docs]) => (
+        <Box key={category} sx={{ mb: 3 }}>
+          <Typography 
+            variant="subtitle1" 
+            sx={{ 
+              fontWeight: 600, 
+              mb: 2,
+              color: getCategoryColor(category),
+              textTransform: 'capitalize',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            <DescriptionIcon /> {category} Documents
+          </Typography>
+          
+          <Grid container spacing={2}>
+            {docs.map((doc) => {
+              const status = getDocumentStatus(doc.document_type)
+              const uploadingInfo = uploadingDocuments[doc.document_type]
+              
+              return (
+                <Grid item xs={12} sm={6} md={4} key={doc.id}>
+                  <Card 
+                    sx={{ 
+                      height: '100%',
+                      border: 1,
+                      borderColor: status === 'uploaded' ? 'success.main' : 
+                                  status === 'uploading' ? 'warning.main' : 'divider',
+                      boxShadow: status === 'uploaded' ? 2 : 0,
+                      transition: 'all 0.3s',
+                      '&:hover': {
+                        boxShadow: 3,
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1 }}>
+                          {doc.document_type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                        </Typography>
+                        {doc.is_required && (
+                          <Chip label="Required" size="small" color="error" sx={{ height: 20 }} />
+                        )}
+                      </Box>
+                      
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2, minHeight: 32 }}>
+                        {doc.description}
+                      </Typography>
+                      
+                      {status === 'uploading' && uploadingInfo && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="caption" color="primary" sx={{ mb: 0.5, display: 'block' }}>
+                            {uploadingInfo.status}
+                          </Typography>
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={uploadingInfo.progress} 
+                            sx={{ height: 6, borderRadius: 1 }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {uploadingInfo.progress}%
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      {status === 'uploaded' ? (
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Chip 
+                            icon={<CheckCircleIcon />}
+                            label="Uploaded" 
+                            color="success" 
+                            size="small"
+                            sx={{ flex: 1 }}
+                          />
+                          <Button
+                            size="small"
+                            color="error"
+                            onClick={() => {
+                              const doc = uploadedDocuments.find(d => d.document_type === doc.document_type)
+                              if (doc) onDelete(doc)
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </Box>
+                      ) : status === 'uploading' ? (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          disabled
+                          startIcon={<CircularProgress size={16} />}
+                        >
+                          Uploading...
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="contained"
+                          size="small"
+                          fullWidth
+                          startIcon={<CloudUploadIcon />}
+                          onClick={() => onUpload(doc.document_type)}
+                        >
+                          Upload
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )
+            })}
+          </Grid>
+        </Box>
+      ))}
+    </Box>
   )
 }
 

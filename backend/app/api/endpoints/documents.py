@@ -46,16 +46,9 @@ async def upload_document(
     # Log received data for debugging
     logger.info(f"Upload request - document_type: '{document_type}', file: '{file.filename}'")
     
-    # Validate document type
-    try:
-        doc_type_enum = DocumentType[document_type.upper()]
-        logger.info(f"Document type validated: {doc_type_enum}")
-    except KeyError:
-        logger.error(f"Invalid document type received: '{document_type}' (type: {type(document_type)})")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid document type: {document_type}. Must be one of: {[e.name for e in DocumentType]}"
-        )
+    # Validate document type (now just a string, no enum conversion needed)
+    # Store as-is since database column is VARCHAR now
+    logger.info(f"Document type received: {document_type}")
     
     # Read file content
     file_content = await file.read()
@@ -127,7 +120,7 @@ async def upload_document(
         # Create document record with extracted text
         db_document = Document(
             application_id=application_id,
-            document_type=doc_type_enum,
+            document_type=document_type,  # Store as string
             document_name=file.filename,
             file_path=file_path,
             file_size=len(file_content),
@@ -232,15 +225,8 @@ async def upload_documents_batch(
     
     for idx, (file, document_type) in enumerate(zip(files, doc_types_list)):
         try:
-            # Validate document type
-            try:
-                doc_type_enum = DocumentType[document_type.upper()]
-            except KeyError:
-                errors.append({
-                    "file": file.filename,
-                    "error": f"Invalid document type: {document_type}"
-                })
-                continue
+            # Document type is just a string now, no enum conversion needed
+            logger.info(f"Processing bulk upload - document_type: {document_type}")
             
             # Read file content
             file_content = await file.read()
