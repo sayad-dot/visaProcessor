@@ -101,7 +101,9 @@ echo "VITE_API_URL=http://localhost:8000/api" > .env
 ```bash
 cd /media/sayad/Ubuntu-Data/visa/backend
 source venv/bin/activate
+uvicorn main:app --port 8000
 python main.py
+
 ```
 
 Backend API: http://localhost:8000

@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     
     # Gemini AI
     GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-1.5-pro"
+    GEMINI_MODEL: str = "models/gemini-2.5-flash"
     
     # File Upload
     MAX_FILE_SIZE: int = 10485760  # 10MB

@@ -17,8 +17,6 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE visa_processing_db TO
 ### Step 2: Setup Backend (2 minutes)
 ```bash
 cd /media/sayad/Ubuntu-Data/visa/backend
-
-# Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
 

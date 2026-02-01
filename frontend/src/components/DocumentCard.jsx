@@ -64,13 +64,21 @@ const DocumentCard = ({
         label: 'AI Generated',
         bgColor: '#f5f5f5'
       };
-    } else {
-      // User must upload this document
+    } else if (requiredDocument?.is_mandatory) {
+      // MANDATORY - user MUST upload this document
       return {
         icon: <ErrorIcon />,
-        color: 'warning',
+        color: 'error',
         label: 'Required',
-        bgColor: '#fff8e1'
+        bgColor: '#ffebee'
+      };
+    } else {
+      // OPTIONAL - user can upload if available
+      return {
+        icon: <CloudUploadIcon />,
+        color: 'info',
+        label: 'Optional',
+        bgColor: '#e3f2fd'
       };
     }
   };

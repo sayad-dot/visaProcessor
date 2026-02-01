@@ -187,8 +187,20 @@ const ApplicationDetailsPage = () => {
   }
 
   const uploadedCount = uploadedDocuments.length
-  const requiredCount = requiredDocuments.length
-  const allDocumentsUploaded = uploadedCount === requiredCount && requiredCount > 0
+  
+  // Count only MANDATORY documents (not optional, not AI-generated)
+  const mandatoryDocuments = requiredDocuments.filter(doc => 
+    doc.is_mandatory === true && doc.can_be_generated === false
+  )
+  const requiredCount = mandatoryDocuments.length
+  
+  // Count how many mandatory documents have been uploaded
+  const uploadedMandatoryCount = mandatoryDocuments.filter(reqDoc => 
+    uploadedDocuments.some(upDoc => upDoc.document_type === reqDoc.document_type)
+  ).length
+  
+  // All mandatory documents uploaded
+  const allDocumentsUploaded = uploadedMandatoryCount === requiredCount && requiredCount > 0
 
   return (
     <Container maxWidth="lg">
@@ -206,7 +218,7 @@ const ApplicationDetailsPage = () => {
         {/* Progress Tracker */}
         <ProgressTracker
           totalDocuments={uploadedCount}
-          uploadedDocuments={uploadedCount}
+          uploadedDocuments={uploadedMandatoryCount}
           requiredDocuments={requiredCount}
         />
 

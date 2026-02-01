@@ -31,7 +31,7 @@ class PDFGeneratorService:
         
         # Configure Gemini
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.model = genai.GenerativeModel('models/gemini-2.5-flash')
         
         # Load all extracted data
         self.extracted_data = self._load_extracted_data()
@@ -115,80 +115,150 @@ class PDFGeneratorService:
     
     def generate_cover_letter(self) -> str:
         """Generate formal cover letter to Embassy of Iceland"""
+        import json
         doc_record = self._create_document_record("cover_letter", "Cover_Letter.pdf")
         file_path = doc_record.file_path
         
         try:
             self._update_progress(doc_record, 10)
+
+            # 1. Collect all data
+            applicant_data = {
+                "name": self._get_value('passport_copy.full_name', 'personal.full_name'),
+                "passport": self._get_value('passport_copy.passport_number', 'personal.passport_number'),
+                "profession": self._get_value('employment.job_title', 'business.business_type'),
+                "company": self._get_value('employment.company_name', 'business.business_name'),
+                "purpose": self._get_value('travel_purpose.purpose', 'travel_purpose.primary_purpose'),
+                "travel_dates": self._get_value('air_ticket.travel_dates', 'hotel_booking.check_in_date'),
+                "places": self._get_value('travel_purpose.places_to_visit', 'hotel_booking.hotel_location'),
+                "income": self._get_value('income_tax_3years.annual_income', 'financial.monthly_income'),
+                "bank_balance": self._get_value('bank_solvency.balance_amount'),
+                "family_ties": self._get_value('home_ties.family_members', 'personal.marital_status'),
+                "property_ties": self._get_value('asset_valuation.total_value', 'assets.property_description'),
+                "reasons_to_return": self._get_value('home_ties.reasons_to_return')
+            }
+            self._update_progress(doc_record, 20)
+
+            # 2. Few-shot example from OCR'd PDF
+            sample_cover_letter = """
+            Subject: Request for a visitor visa application for the United Kingdom.
             
-            # Collect all data
-            name = self._get_value('passport_copy.full_name', 'personal.full_name')
-            passport = self._get_value('passport_copy.passport_number', 'personal.passport_number')
-            profession = self._get_value('employment.job_title', 'business.business_type')
-            purpose = self._get_value('travel_purpose.purpose', 'travel_purpose.primary_purpose')
-            travel_dates = self._get_value('air_ticket.travel_dates', 'hotel_booking.check_in_date')
-            places = self._get_value('travel_purpose.places_to_visit', 'hotel_booking.hotel_location')
-            income = self._get_value('income_tax_3years.annual_income', 'financial.monthly_income')
-            bank_balance = self._get_value('bank_solvency.balance_amount')
-            family = self._get_value('home_ties.family_members', 'personal.marital_status')
-            property_info = self._get_value('asset_valuation.total_value', 'assets.property_description')
+            Dear Respected Sir,
             
-            self._update_progress(doc_record, 30)
+            I am Md Swapon Sheikh a business proprietor. I intend to visit United Kingdom to experience its renowned natural beauty, explore its rich cultural heritage, and hopefully, this trip will create outstanding memories. I am so excited that I have prepared all my papers and documents according to United Kingdom immigration procedures.
             
-            # Generate intelligent content using Gemini - Iceland Format
+            I am Md Swapon Sheikh I am the applicant and a Bangladeshi citizen, holding passport number A04907327. United Kingdom has always been my dream country as a tourist destination. So now, I am writing to formally submit my application for a tourist visa to UNITED KINGDOM. I have fulfilled all the requirements outlined by United Kingdom immigration. Now I am currently a Proprietor. My company name is “SHEIKH ONLINE SERVICE” and I am the founder of my business. So, all the employees of my company are dependent on me, according to my family members. Additionally, I have attached all the proven documents with this application and providing all the information about my Family Member.
+            
+            NOTE: My previous application GWF084177219 was refused because my business and financial details were not clearly shown. In this reapplication, I have provided complete and clear documents to fully address those concerns.
+            
+            Purpose of Travel:
+            I am a Businessman and I wish to visit the United Kingdom for tourism and short recreational travel. I plan to stay in London from 29 December 2025 to 12 January 2026 to enjoy a refreshing break from my regular business activities. During my stay, I intend to explore major tourist attractions such as Big Ben, Tower Bridge, Buckingham Palace, the British Museum, the London Eye, Hyde Park, Oxford Street, and other cultural and historical sites. I also wish to enjoy the festive atmosphere of New Year's Eve on 31 December 2025 in London. This is a personal holiday trip, and after completing my visit, I will return to Bangladesh on the scheduled date to resume my business responsibilities.
+            
+            Financial Stand and Trip Funds:
+            I am sharing my bank statements here so you can demonstrate my financial ability to cover all expenses associated with this trip. My accounts reflect the following balances...
+            
+            Business and Job Ties:
+            I, MD Swapon Sheikh, am a businessman and the proprietor of Sheikh Online Service, a small Internet service business located at 706, Moddo Naya Nagar, Vatara, Dhaka-1212. I am fully responsible for managing daily operations, customer services, and business development. My regular presence is required for the smooth running of the business, and I must return to Bangladesh after my trip to continue supervising my work and maintaining my client commitments. These ongoing responsibilities firmly establish my strong business ties to Bangladesh.
+            
+            I have a Strong Travel History of compliance with international travel regulations, having previously visited...
+            
+            I respectfully request your favorable consideration of my application and remain available to provide any additional information or documentation as needed. I sincerely look forward to this visit and greatly appreciate your time and attention to my application. Thank you for your understanding and support. I remain at your disposal for any further inquiries.
+
+            Yours faithfully,
+            MD SWAPON SHEIKH
+            """
+
+            # 3. Construct the new, advanced prompt
             prompt = f"""
-Write a professional cover letter for Iceland Embassy following their preferred format:
+            You are an expert visa application consultant, specializing in crafting compelling cover letters for Schengen visa applications. Your task is to write a professional and persuasive cover letter for a tourist visa to Iceland.
 
-My details:
-- Name: {name}
-- Passport: {passport}
-- Job: {profession}
-- Why traveling: {purpose}
-- When: {travel_dates}
-- Where in Iceland: {places}
-- My income: {income}
-- Bank money: {bank_balance}
-- Family: {family}
-- Property: {property_info}
+            **Analysis of a High-Quality Sample Letter:**
+            Here is an example of a good cover letter. Notice its structure, tone, and the way it clearly presents information and addresses potential concerns.
+            ---
+            [GOOD EXAMPLE START]
+            {sample_cover_letter}
+            [GOOD EXAMPLE END]
+            ---
 
-IMPORTANT RULES:
-- NO markdown (no **, no *, no #)
-- Keep it professional but clear
-- Maximum 4 paragraphs, each 4-5 sentences
-- Follow this structure exactly:
+            **Applicant's Profile:**
+            Now, analyze the following data for the current applicant.
+            - Name: {applicant_data['name']}
+            - Passport: {applicant_data['passport']}
+            - Profession: {applicant_data['profession']} at {applicant_data['company']}
+            - Purpose of Visit: {applicant_data['purpose']}
+            - Proposed Travel Dates: {applicant_data['travel_dates']}
+            - Planned locations: {applicant_data['places']}
+            - Financials: Annual income of {applicant_data['income']}, with {applicant_data['bank_balance']} in the bank.
+            - Home Ties (Family): {applicant_data['family_ties']}
+            - Home Ties (Assets): Owns {applicant_data['property_ties']}
+            - Stated Reason to Return: {applicant_data['reasons_to_return']}
 
-Paragraph 1: "I am [name], passport [number], working as [job]. I am applying for Iceland Schengen tourist visa to visit Iceland from [dates]. I will stay at [hotel/places]."
+            **Your Task: Generate a New Cover Letter**
+            Based on the applicant's profile, write a new cover letter.
 
-Paragraph 2: "My purpose is [purpose]. I plan to visit [places] and do [activities]. I have booked [hotel] and have return flight tickets."
+            **Instructions:**
+            1.  **Structure and Content:** The letter must be formal and structured into 4-5 clear paragraphs:
+                *   **Paragraph 1: Introduction:** Introduce the applicant, their profession, and the purpose of the letter (applying for an Iceland tourist visa for specific dates).
+                *   **Paragraph 2: Purpose of Travel:** Elaborate on the travel plans. Mention the tourist nature of the trip, key attractions they wish to see in Iceland ({applicant_data['places']}), and their excitement for the trip.
+                *   **Paragraph 3: Financial Sponsorship:** Clearly state that the applicant will be funding their own trip. Mention their financial stability by referencing their income and savings, demonstrating their capacity to cover all costs without issue.
+                *   **Paragraph 4: Strong Ties to Home Country:** This is crucial. Create a compelling argument for why the applicant will return to their home country. Synthesize the information about their job, family, and property into a strong statement of their ties and responsibilities at home.
+                *   **Paragraph 5: Conclusion:** End with a polite closing, expressing gratitude for the consideration of their application and stating their availability for further information.
+            2.  **Tone:** The tone should be professional, confident, and respectful. Avoid overly casual language or emotional pleas.
+            3.  **Output Format:** Structure your response as a JSON object with the following keys:
+                *   `"subject"`: A string for the subject line of the letter.
+                *   `"greeting"`: A string for the salutation (e.g., "Dear Visa Officer,").
+                *   `"body"`: An array of strings, where each string is a paragraph of the letter's body.
+                *   `"closing"`: A string for the closing remark (e.g., "Sincerely,").
+                *   `"signature"`: A string for the applicant's name.
 
-Paragraph 3: "I earn [income] annually and have [bank amount] in my bank. I will fund this trip from my savings. All my trip expenses are covered."
+            **Example JSON output:**
+            {{
+              "subject": "Application for Schengen Tourist Visa to Iceland",
+              "greeting": "Dear Sir or Madam,",
+              "body": [
+                "Paragraph 1 text here...",
+                "Paragraph 2 text here...",
+                "Paragraph 3 text here...",
+                "Paragraph 4 text here...",
+                "Paragraph 5 text here..."
+              ],
+              "closing": "Yours faithfully,",
+              "signature": "{applicant_data['name']}"
+            }}
 
-Paragraph 4: "I have strong ties to Bangladesh. My [family] lives here. I work at [company] and own [property]. I will return after my visit because [reason]. Thank you for considering my application."
-
-Write in simple, clear English. No fancy words. Direct and honest.
-"""
+            Now, generate the JSON for the new cover letter.
+            """
             
-            letter_content = self._generate_content_with_ai(prompt)
-            self._update_progress(doc_record, 60)
-            
-            # Create PDF
+            self._update_progress(doc_record, 40)
+            ai_response_text = self._generate_content_with_ai(prompt)
+            self._update_progress(doc_record, 70)
+
+            # 4. Parse the AI's JSON response
+            try:
+                # Clean the response to extract only the JSON part
+                json_str = ai_response_text.strip()
+                if json_str.startswith('```json'):
+                    json_str = json_str[7:]
+                if json_str.endswith('```'):
+                    json_str = json_str[:-3]
+                
+                letter_data = json.loads(json_str)
+                letter_content = "\n\n".join(letter_data.get('body', []))
+                subject_text = f"<b>Subject: {letter_data.get('subject', 'Application for Schengen Tourist Visa')}</b>"
+            except (json.JSONDecodeError, KeyError) as e:
+                # Fallback to old method if JSON fails
+                letter_content = ai_response_text
+                subject_text = "<b>Subject: Application for Schengen Tourist Visa</b>"
+
+            self._update_progress(doc_record, 80)
+
+            # 5. Create PDF with the generated content
             pdf = SimpleDocTemplate(file_path, pagesize=A4,
                                    topMargin=1*inch, bottomMargin=1*inch,
                                    leftMargin=1*inch, rightMargin=1*inch)
             
             styles = getSampleStyleSheet()
             story = []
-            
-            # Custom styles
-            title_style = ParagraphStyle(
-                'CustomTitle',
-                parent=styles['Heading1'],
-                fontSize=14,
-                textColor=colors.HexColor('#1a1a1a'),
-                spaceAfter=20,
-                alignment=TA_CENTER,
-                fontName='Helvetica-Bold'
-            )
             
             body_style = ParagraphStyle(
                 'CustomBody',
@@ -199,13 +269,11 @@ Write in simple, clear English. No fancy words. Direct and honest.
                 fontName='Helvetica'
             )
             
-            # Date
             story.append(Spacer(1, 0.2*inch))
             date_text = f"<b>Date:</b> {datetime.now().strftime('%B %d, %Y')}"
             story.append(Paragraph(date_text, body_style))
             story.append(Spacer(1, 0.3*inch))
             
-            # To
             to_text = """<b>To,</b><br/>
 The Embassy of Iceland<br/>
 House 16, Road 113/A<br/>
@@ -214,12 +282,10 @@ Bangladesh"""
             story.append(Paragraph(to_text, body_style))
             story.append(Spacer(1, 0.3*inch))
             
-            # Subject
-            subject_text = "<b>Subject: Application for Schengen Tourist Visa</b>"
             story.append(Paragraph(subject_text, body_style))
             story.append(Spacer(1, 0.3*inch))
             
-            # Letter body
+            # Use parsed content
             paragraphs = letter_content.split('\n\n')
             for para in paragraphs:
                 if para.strip():
@@ -229,7 +295,6 @@ Bangladesh"""
             # Build PDF
             pdf.build(story)
             
-            # Update file size
             file_size = os.path.getsize(file_path)
             doc_record.file_size = file_size
             self._update_progress(doc_record, 100, GenerationStatus.COMPLETED)
@@ -772,62 +837,133 @@ I understand that any false information may result in rejection of my visa appli
     
     def generate_travel_itinerary(self) -> str:
         """Generate day-by-day travel itinerary for Iceland"""
+        import json
+        import re
         doc_record = self._create_document_record("travel_itinerary", "Travel_Itinerary.pdf")
         file_path = doc_record.file_path
         
         try:
             self._update_progress(doc_record, 10)
             
-            # Get travel data
-            name = self._get_value('personal.full_name')
-            passport = self._get_value('passport_copy.passport_number')
-            hotel = self._get_value('hotel_booking.hotel_name')
-            duration = self._get_value('hotel_booking.duration', 'travel_purpose.duration')
-            check_in = self._get_value('hotel_booking.check_in_date')
-            places = self._get_value('travel_purpose.places_to_visit')
-            activities = self._get_value('travel_purpose.planned_activities')
-            
-            self._update_progress(doc_record, 40)
-            
-            # Generate AI itinerary
+            # 1. Get travel data
+            applicant_data = {
+                "name": self._get_value('personal.full_name'),
+                "passport": self._get_value('passport_copy.passport_number'),
+                "hotel": self._get_value('hotel_booking.hotel_name', 'travel_purpose.accommodation'),
+                "duration": self._get_value('hotel_booking.duration', 'travel_purpose.duration'),
+                "check_in": self._get_value('hotel_booking.check_in_date'),
+                "places": self._get_value('travel_purpose.places_to_visit'),
+                "activities": self._get_value('travel_purpose.planned_activities')
+            }
+            self._update_progress(doc_record, 20)
+
+            # 2. Few-shot example from OCR'd PDF
+            sample_itinerary = """
+            Travel Itinerary Plan For London, United Kingdom
+            Applicant: Md Swapon Sheikh
+            Stay Duration: 29 December 2025 – 12 January 2026 (14 Days)
+
+            Day 1 – 29 Dec 2025
+            Arrival in London
+            - Check-in at 365 London Hostel
+            - Light walking around local streets, restaurants & markets
+            - Rest early after long travel
+
+            Day 2 – 30 Dec 2025
+            Central London Highlights
+            - Visit Piccadilly Circus, Leicester Square
+            - Explore Trafalgar Square
+            - Evening walk along Covent Garden
+
+            Day 3 – 31 Dec 2025
+            New Year's Eve Celebration
+            - Visit London Eye Riverside area (Southbank)
+            - Enjoy festive atmosphere, street lights & music
+            - Watch New Year celebrations (public viewing area)
+            """
+
+            # 3. Construct the new, advanced prompt
             prompt = f"""
-Generate a detailed day-by-day travel itinerary for Iceland with these details:
-- Traveler: {name}
-- Duration: {duration} days
-- Check-in Date: {check_in}
-- Hotel: {hotel}
-- Places to Visit: {places}
-- Activities: {activities}
+            You are a meticulous travel agent who creates detailed, day-by-day travel itineraries for visa applications. Your task is to generate a realistic and appealing itinerary for a trip to Iceland.
 
-IMPORTANT FORMATTING RULES:
-- DO NOT use markdown formatting (no **, no -, no #)
-- DO NOT use bullet points or asterisks
-- Use plain text only
-- Format each day as: "Day 1 - Date: Activity description"
-- Use simple paragraphs separated by blank lines
-- Include specific times in format "09:00 - 10:00: Activity"
+            **Analysis of a High-Quality Sample Itinerary:**
+            Here is an example of a well-structured itinerary. Note the clear separation of days and activities.
+            ---
+            [GOOD EXAMPLE START]
+            {sample_itinerary}
+            [GOOD EXAMPLE END]
+            ---
 
-Create a realistic daily schedule with:
-- Morning activities (09:00-13:00)
-- Afternoon activities (13:00-18:00)
-- Evening activities (18:00-22:00)
-- Specific Iceland attractions (Golden Circle, Blue Lagoon, Reykjavik, waterfalls, Northern Lights)
-- Realistic timings and travel times
-- Meals and rest periods
+            **Applicant's Travel Details:**
+            - Traveler: {applicant_data['name']}
+            - Duration of Stay: {applicant_data['duration']} days
+            - Accommodation: {applicant_data['hotel']}
+            - Desired Places to Visit: {applicant_data['places']}
+            - Planned Activities: {applicant_data['activities']}
+            - Check-in Date: {applicant_data['check_in']}
 
-Generate {duration or 7} days of detailed itinerary in plain text format.
-"""
+            **Your Task: Generate a New Itinerary for Iceland**
+            Based on the applicant's details, create a new travel itinerary for their trip to Iceland.
+
+            **Instructions:**
+            1.  **Content:** Create a logical and appealing daily schedule. Include famous Icelandic attractions (e.g., Golden Circle, Reykjavik, Blue Lagoon, Northern Lights if in season, waterfalls like Gullfoss and Seljalandsfoss). Mix popular tourist spots with some local experiences. Include realistic suggestions for meals (e.g., "Lunch at a local cafe").
+            2.  **Structure:** The itinerary should cover each day of the {applicant_data['duration']}-day trip.
+            3.  **Output Format:** Structure your response as a single JSON object. This object should contain one key, `"itinerary"`, which is an array of objects. Each object in the array represents a single day and must have the following keys:
+                *   `"day"`: (String) The day number (e.g., "Day 1").
+                *   `"date"`: (String) The specific date for that day's plan. Use the check-in date to calculate subsequent dates.
+                *   `"title"`: (String) A short, catchy title for the day's theme (e.g., "Arrival and Reykjavik Exploration").
+                *   `"activities"`: (Array of Strings) A list of activities for the day. Each string should be a descriptive plan for the morning, afternoon, or evening.
+
+            **Example JSON output:**
+            {{
+              "itinerary": [
+                {{
+                  "day": "Day 1",
+                  "date": "{applicant_data['check_in'] or '2025-12-29'}",
+                  "title": "Arrival in Reykjavik & Settling In",
+                  "activities": [
+                    "Arrive at Keflavík Airport (KEF), clear immigration, and pick up luggage.",
+                    "Take a Flybus or pre-booked transfer to the hotel in Reykjavik.",
+                    "Check-in at {applicant_data['hotel']}.",
+                    "Evening: Take a light walk around the hotel area and have dinner at a local Icelandic restaurant."
+                  ]
+                }},
+                {{
+                  "day": "Day 2",
+                  "date": "Calculated Date",
+                  "title": "The Golden Circle Expedition",
+                  "activities": [
+                    "Morning: Visit Þingvellir National Park, a UNESCO World Heritage site.",
+                    "Afternoon: Witness the erupting geysers at Geysir geothermal area and marvel at the majestic Gullfoss waterfall.",
+                    "Evening: Return to Reykjavik. Enjoy dinner and relax."
+                  ]
+                }}
+              ]
+            }}
+
+            Now, generate the JSON for the new travel itinerary for Iceland.
+            """
+
+            self._update_progress(doc_record, 40)
+            ai_response_text = self._generate_content_with_ai(prompt)
+            self._update_progress(doc_record, 70)
+
+            # 4. Parse the AI's JSON response
+            try:
+                # Clean the response to extract only the JSON part
+                json_str = ai_response_text.strip()
+                if json_str.startswith('```json'):
+                    json_str = json_str[7:]
+                if json_str.endswith('```'):
+                    json_str = json_str[:-3]
+                
+                itinerary_data = json.loads(json_str).get("itinerary", [])
+            except (json.JSONDecodeError, KeyError) as e:
+                itinerary_data = [] # Failed to parse, will be handled below
+
+            self._update_progress(doc_record, 80)
             
-            itinerary_content = self._generate_content_with_ai(prompt)
-            self._update_progress(doc_record, 60)
-            
-            # Clean up any markdown that slipped through
-            import re
-            itinerary_content = re.sub(r'\*\*', '', itinerary_content)  # Remove **
-            itinerary_content = re.sub(r'\*', '', itinerary_content)    # Remove single *
-            itinerary_content = re.sub(r'^#+\s+', '', itinerary_content, flags=re.MULTILINE)  # Remove #
-            
-            # Create PDF
+            # 5. Create PDF
             pdf = SimpleDocTemplate(file_path, pagesize=A4,
                                    topMargin=0.75*inch, bottomMargin=0.75*inch,
                                    leftMargin=0.75*inch, rightMargin=0.75*inch)
@@ -835,134 +971,47 @@ Generate {duration or 7} days of detailed itinerary in plain text format.
             styles = getSampleStyleSheet()
             story = []
             
-            # Title with box
             title_style = ParagraphStyle(
-                'Title',
-                parent=styles['Heading1'],
-                fontSize=16,
-                textColor=colors.white,
-                spaceAfter=20,
-                alignment=TA_CENTER,
-                fontName='Helvetica-Bold',
-                backColor=colors.HexColor('#1e3a8a'),
-                borderPadding=10
+                'Title', parent=styles['Heading1'], fontSize=16, textColor=colors.white, spaceAfter=20,
+                alignment=TA_CENTER, fontName='Helvetica-Bold', backColor=colors.HexColor('#1e3a8a'), borderPadding=10
             )
-            
             story.append(Paragraph("TRAVEL ITINERARY - ICELAND", title_style))
             story.append(Spacer(1, 0.3*inch))
             
-            # Header info box
             header_data = [
-                ['Applicant Name:', name or 'N/A'],
-                ['Passport Number:', passport or 'N/A'],
-                ['Hotel:', hotel or 'To be confirmed'],
-                ['Duration:', f"{duration} days" if duration else 'N/A'],
-                ['Check-in Date:', check_in or 'N/A'],
+                ['Applicant Name:', applicant_data['name'] or 'N/A'],
+                ['Passport Number:', applicant_data['passport'] or 'N/A'],
+                ['Accommodation:', applicant_data['hotel'] or 'To be confirmed'],
+                ['Duration:', f"{applicant_data['duration']} days" if applicant_data['duration'] else 'N/A'],
             ]
-            
             header_table = Table(header_data, colWidths=[1.5*inch, 4.5*inch])
             header_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f0f9ff')),
                 ('FONT', (0, 0), (0, -1), 'Helvetica-Bold', 10),
-                ('FONT', (1, 0), (1, -1), 'Helvetica', 10),
-                ('PADDING', (0, 0), (-1, -1), 10),
+                ('PADDING', (0, 0), (-1, -1), 8),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#bfdbfe')),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ]))
-            
             story.append(header_table)
             story.append(Spacer(1, 0.4*inch))
-            
-            # Itinerary content styles
-            day_header_style = ParagraphStyle(
-                'DayHeader',
-                parent=styles['Heading2'],
-                fontSize=13,
-                textColor=colors.white,
-                spaceAfter=8,
-                spaceBefore=12,
-                fontName='Helvetica-Bold',
-                backColor=colors.HexColor('#2563eb'),
-                borderPadding=8,
-                leftIndent=10
-            )
-            
-            section_style = ParagraphStyle(
-                'Section',
-                parent=styles['BodyText'],
-                fontSize=11,
-                leading=15,
-                fontName='Helvetica-Bold',
-                textColor=colors.HexColor('#1e3a8a'),
-                spaceBefore=8,
-                spaceAfter=4,
-                leftIndent=5
-            )
-            
-            activity_style = ParagraphStyle(
-                'Activity',
-                parent=styles['BodyText'],
-                fontSize=10,
-                leading=14,
-                fontName='Helvetica',
-                textColor=colors.HexColor('#1e293b'),
-                leftIndent=15,
-                spaceBefore=3
-            )
-            
-            divider_line_style = ParagraphStyle(
-                'Divider',
-                parent=styles['Normal'],
-                fontSize=1,
-                spaceBefore=5,
-                spaceAfter=5
-            )
-            
-            # Parse and format itinerary content
-            lines = itinerary_content.split('\n')
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                
-                # Day headers (e.g., "Day 1", "Day 1 -")
-                if line.lower().startswith('day ') and ('-' in line[:15] or line.lower().startswith('day 1')):
-                    story.append(Spacer(1, 0.15*inch))
-                    story.append(Paragraph(line, day_header_style))
-                
-                # Time-based sections (Morning, Afternoon, Evening)
-                elif any(period in line.lower() for period in ['morning', 'afternoon', 'evening', 'night']):
-                    if '(' in line or ':' in line:
-                        story.append(Paragraph(line, section_style))
-                    else:
-                        story.append(Paragraph(line, activity_style))
-                
-                # Activities with times (contains time format like 09:00)
-                elif re.search(r'\d{2}:\d{2}', line):
-                    story.append(Paragraph(line, activity_style))
-                
-                # Hotel info, traveler info
-                elif any(keyword in line.lower() for keyword in ['traveler:', 'hotel:', 'duration:', 'check-in']):
-                    continue  # Skip, already in header table
-                
-                # Regular content
-                else:
-                    if len(line) > 50:  # Longer text is likely description
-                        story.append(Paragraph(line, activity_style))
-                    elif len(line) > 0:
-                        story.append(Paragraph(line, activity_style))
-            
-            # Add footer note
-            story.append(Spacer(1, 0.3*inch))
-            footer_style = ParagraphStyle(
-                'Footer',
-                parent=styles['Normal'],
-                fontSize=8,
-                textColor=colors.HexColor('#64748b'),
-                alignment=TA_CENTER,
-                fontStyle='italic'
-            )
-            story.append(Paragraph("This itinerary is for visa application purposes and may be adjusted based on weather and availability.", footer_style))
+
+            if not itinerary_data: # Fallback if JSON parsing failed or AI returned no data
+                story.append(Paragraph("Detailed itinerary to be provided upon arrival.", styles['Normal']))
+            else:
+                day_header_style = ParagraphStyle(
+                    'DayHeader', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#1e40af'),
+                    spaceAfter=8, spaceBefore=12, fontName='Helvetica-Bold'
+                )
+                activity_style = ParagraphStyle(
+                    'Activity', parent=styles['BodyText'], fontSize=10, leading=14, leftIndent=15
+                )
+                for day_plan in itinerary_data:
+                    day_title = f"{day_plan.get('day', '')} ({day_plan.get('date', '')}) - {day_plan.get('title', '')}"
+                    story.append(Paragraph(day_title, day_header_style))
+                    
+                    activities_list = day_plan.get('activities', [])
+                    for activity in activities_list:
+                        story.append(Paragraph(f"• {activity}", activity_style))
+                    story.append(Spacer(1, 0.1*inch))
             
             # Build PDF
             pdf.build(story)

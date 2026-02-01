@@ -141,7 +141,9 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ### Option 2: Run backend Python file directly
 ```bash
 cd /media/sayad/Ubuntu-Data/visa/backend
-python main.py
+source venv/bin/activate
+uvicorn main:app --reload
+
 ```
 
 ### Verify Backend Running:

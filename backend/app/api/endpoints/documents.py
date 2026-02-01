@@ -89,19 +89,42 @@ async def upload_document(
             document_type=document_type
         )
         
-        # Validate PDF if it's a PDF file
+        # ===== CRITICAL FIX: Extract text immediately during upload =====
+        extracted_text = ""
         validation_result = None
-        if file_extension == 'pdf':
-            validation_result = pdf_service.validate_pdf(file_path)
-            if not validation_result.get('valid', False):
-                # Clean up invalid file
-                storage_service.delete_file(file_path)
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid PDF file: {validation_result.get('error', 'Unknown error')}"
-                )
         
-        # Create document record
+        try:
+            logger.info(f"📄 Starting text extraction for {file.filename}...")
+            
+            # Extract text based on file type
+            if file_extension in ['pdf', 'jpg', 'jpeg', 'png', 'bmp', 'tiff']:
+                extracted_text = pdf_service.extract_text_from_file(file_path)
+                logger.info(f"✅ Extracted {len(extracted_text)} characters from {file.filename}")
+                
+                # Validate PDF if it's a PDF file
+                if file_extension == 'pdf':
+                    validation_result = pdf_service.validate_pdf(file_path)
+                    if not validation_result.get('valid', False):
+                        # Clean up invalid file
+                        storage_service.delete_file(file_path)
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Invalid PDF file: {validation_result.get('error', 'Unknown error')}"
+                        )
+                
+                # Warn if no text extracted
+                if len(extracted_text.strip()) < 10:
+                    logger.warning(f"⚠️ Very little text extracted from {file.filename} ({len(extracted_text)} chars)")
+                    logger.warning("This may be a blank page or the file may need manual OCR")
+            else:
+                logger.warning(f"⚠️ Unsupported file type for text extraction: {file_extension}")
+                
+        except Exception as e:
+            logger.error(f"❌ Error extracting text during upload: {str(e)}")
+            # Don't fail the upload, but log the error
+            extracted_text = ""
+        
+        # Create document record with extracted text
         db_document = Document(
             application_id=application_id,
             document_type=doc_type_enum,
@@ -110,7 +133,9 @@ async def upload_document(
             file_size=len(file_content),
             mime_type=file.content_type or "application/octet-stream",
             is_uploaded=True,
-            is_processed=False
+            is_processed=True,  # ← FIXED: Mark as processed
+            processed_at=datetime.now(),  # ← FIXED: Set processing timestamp
+            extracted_text=extracted_text  # ← FIXED: Store extracted text
         )
         
         db.add(db_document)
@@ -129,7 +154,15 @@ async def upload_document(
             "document_type": document_type,
             "file_name": file.filename,
             "file_size": len(file_content),
-            "message": "Document uploaded successfully"
+            "message": "Document uploaded successfully",
+            "text_extracted": len(extracted_text) > 0,  # ← NEW: Indicate if text was extracted
+            "text_length": len(extracted_text),  # ← NEW: Length of extracted text
+            "extraction_quality": (
+                "excellent" if len(extracted_text) > 500 else
+                "good" if len(extracted_text) > 100 else
+                "fair" if len(extracted_text) > 10 else
+                "poor"
+            )  # ← NEW: Quality indicator
         }
         
         # Add PDF metadata if available
