@@ -194,60 +194,12 @@ export const mockApi = {
           is_required: false
         },
         {
-          key: "phone_number",
-          text: "What is your contact phone number?",
+          key: "nationality",
+          text: "What is your nationality?",
           data_type: "text",
           is_required: false,
-          placeholder: "+880-1XXXXXXXXX"
-        }
-      ],
-      "Travel Information": [
-        {
-          key: "previous_visa_rejection",
-          text: "Have you ever been rejected for any visa to any country?",
-          data_type: "select",
-          is_required: false,
-          options: ["No", "Yes - Please explain"]
+          placeholder: "e.g., Bangladeshi"
         },
-        {
-          key: "travel_purpose_detail",
-          text: "Please describe in detail why you want to visit Iceland:",
-          data_type: "textarea",
-          is_required: false,
-          placeholder: "Describe your travel plans and purpose"
-        },
-        {
-          key: "previous_travel",
-          text: "Have you traveled internationally before?",
-          data_type: "select",
-          is_required: false,
-          options: ["No", "Yes - 1-2 times", "Yes - 3-5 times", "Yes - More than 5 times"]
-        }
-      ],
-      "Financial Information": [
-        {
-          key: "monthly_income",
-          text: "What is your monthly income in BDT?",
-          data_type: "number",
-          is_required: false,
-          placeholder: "Enter amount in BDT"
-        },
-        {
-          key: "bank_balance",
-          text: "What is your current bank balance?",
-          data_type: "number",
-          is_required: false,
-          placeholder: "Enter current balance"
-        },
-        {
-          key: "property_owned",
-          text: "Do you own any property or real estate?",
-          data_type: "select",
-          is_required: false,
-          options: ["No", "Yes - Residential", "Yes - Commercial", "Yes - Both"]
-        }
-      ],
-      "Family Information": [
         {
           key: "marital_status",
           text: "What is your marital status?",
@@ -256,21 +208,306 @@ export const mockApi = {
           options: ["Single", "Married", "Divorced", "Widowed"]
         },
         {
-          key: "children_count",
-          text: "How many children do you have?",
+          key: "phone_number",
+          text: "What is your contact phone number?",
+          data_type: "text",
+          is_required: false,
+          placeholder: "+880-1XXXXXXXXX"
+        },
+        {
+          key: "email_address",
+          text: "What is your email address?",
+          data_type: "text",
+          is_required: false,
+          placeholder: "your.email@example.com"
+        },
+        {
+          key: "current_address",
+          text: "What is your current residential address?",
+          data_type: "textarea",
+          is_required: false,
+          placeholder: "Enter your full address"
+        },
+        {
+          key: "permanent_address",
+          text: "What is your permanent address (if different)?",
+          data_type: "textarea",
+          is_required: false,
+          placeholder: "Enter permanent address or write 'Same as current'"
+        }
+      ],
+      "Travel Information": [
+        {
+          key: "travel_purpose",
+          text: "What is the primary purpose of your visit to Iceland?",
+          data_type: "select",
+          is_required: false,
+          options: ["Tourism", "Business", "Visiting Friends/Family", "Conference/Event", "Other"]
+        },
+        {
+          key: "travel_purpose_detail",
+          text: "Please describe in detail your travel plans and purpose:",
+          data_type: "textarea",
+          is_required: false,
+          placeholder: "Describe your travel plans, places to visit, activities planned"
+        },
+        {
+          key: "travel_duration",
+          text: "How many days do you plan to stay in Iceland?",
           data_type: "number",
+          is_required: false,
+          placeholder: "Number of days"
+        },
+        {
+          key: "arrival_date",
+          text: "When do you plan to arrive in Iceland?",
+          data_type: "date",
           is_required: false
         },
         {
-          key: "spouse_employment",
-          text: "If married, what is your spouse's employment status?",
+          key: "departure_date",
+          text: "When do you plan to depart from Iceland?",
+          data_type: "date",
+          is_required: false
+        },
+        {
+          key: "accommodation_type",
+          text: "What type of accommodation have you arranged?",
           data_type: "select",
           is_required: false,
-          options: ["Not Applicable", "Employed", "Self-employed", "Unemployed", "Student"]
+          options: ["Hotel", "Airbnb", "Hostel", "Staying with Friends/Family", "Not Yet Booked"]
+        },
+        {
+          key: "previous_travel",
+          text: "Have you traveled internationally before?",
+          data_type: "select",
+          is_required: false,
+          options: ["No", "Yes - 1-2 times", "Yes - 3-5 times", "Yes - More than 5 times"]
+        },
+        {
+          key: "previous_schengen",
+          text: "Have you visited any Schengen countries before?",
+          data_type: "select",
+          is_required: false,
+          options: ["No", "Yes - Once", "Yes - Multiple times"]
+        },
+        {
+          key: "previous_visa_rejection",
+          text: "Have you ever been rejected for any visa to any country?",
+          data_type: "select",
+          is_required: false,
+          options: ["No", "Yes - Please explain in next question"]
+        },
+        {
+          key: "rejection_details",
+          text: "If you answered 'Yes' above, please provide details:",
+          data_type: "textarea",
+          is_required: false,
+          placeholder: "Country, date, and reason for rejection"
+        },
+        {
+          key: "return_ticket",
+          text: "Do you have a confirmed return ticket?",
+          data_type: "select",
+          is_required: false,
+          options: ["Yes - Booked", "Yes - Reserved", "Not Yet", "Will book after visa approval"]
         }
       ],
-      total_questions: 12,
-      note: "All questions are OPTIONAL. Answer only what you want to provide."
+      "Employment & Financial Information": [
+        {
+          key: "employment_status",
+          text: "What is your current employment status?",
+          data_type: "select",
+          is_required: false,
+          options: ["Employed - Full Time", "Employed - Part Time", "Self-Employed/Business Owner", "Student", "Retired", "Unemployed"]
+        },
+        {
+          key: "employer_name",
+          text: "What is your employer's name or business name?",
+          data_type: "text",
+          is_required: false,
+          placeholder: "Company/Business name"
+        },
+        {
+          key: "job_title",
+          text: "What is your job title or position?",
+          data_type: "text",
+          is_required: false,
+          placeholder: "Your position/designation"
+        },
+        {
+          key: "employment_duration",
+          text: "How long have you been working at your current position?",
+          data_type: "text",
+          is_required: false,
+          placeholder: "e.g., 5 years, 2 months"
+        },
+        {
+          key: "monthly_income",
+          text: "What is your monthly income (in BDT)?",
+          data_type: "number",
+          is_required: false,
+          placeholder: "Enter amount in BDT"
+        },
+        {
+          key: "annual_income",
+          text: "What is your approximate annual income (in BDT)?",
+          data_type: "number",
+          is_required: false,
+          placeholder: "Enter annual income"
+        },
+        {
+          key: "bank_balance",
+          text: "What is your current total bank balance across all accounts?",
+          data_type: "number",
+          is_required: false,
+          placeholder: "Total balance in BDT"
+        },
+        {
+          key: "trip_sponsor",
+          text: "Who is sponsoring your trip?",
+          data_type: "select",
+          is_required: false,
+          options: ["Self-funded", "Family Member", "Employer", "Friend", "Other"]
+        },
+        {
+          key: "trip_budget",
+          text: "What is your estimated budget for this trip (in BDT)?",
+          data_type: "number",
+          is_required: false,
+          placeholder: "Estimated total budget"
+        },
+        {
+          key: "property_owned",
+          text: "Do you own any property or real estate?",
+          data_type: "select",
+          is_required: false,
+          options: ["No", "Yes - Residential", "Yes - Commercial", "Yes - Both", "Yes - Land Only"]
+        },
+        {
+          key: "property_value",
+          text: "If you own property, what is the approximate total value (in BDT)?",
+          data_type: "number",
+          is_required: false,
+          placeholder: "Approximate property value"
+        },
+        {
+          key: "vehicle_owned",
+          text: "Do you own any vehicles?",
+          data_type: "select",
+          is_required: false,
+          options: ["No", "Yes - Car", "Yes - Motorcycle", "Yes - Multiple vehicles"]
+        }
+      ],
+      "Family & Home Ties": [
+        {
+          key: "family_marital_status",
+          text: "Your marital status:",
+          data_type: "select",
+          is_required: false,
+          options: ["Single", "Married", "Divorced", "Widowed", "Engaged"]
+        },
+        {
+          key: "spouse_name",
+          text: "If married, what is your spouse's name?",
+          data_type: "text",
+          is_required: false,
+          placeholder: "Spouse full name"
+        },
+        {
+          key: "number_of_children",
+          text: "How many children do you have?",
+          data_type: "select",
+          is_required: false,
+          options: ["0", "1", "2", "3", "4 or more"]
+        },
+        {
+          key: "children_ages",
+          text: "If you have children, please list their ages:",
+          data_type: "text",
+          is_required: false,
+          placeholder: "e.g., 5, 8, 12"
+        },
+        {
+          key: "parents_alive",
+          text: "Are your parents alive?",
+          data_type: "select",
+          is_required: false,
+          options: ["Both alive", "Mother alive", "Father alive", "Both deceased"]
+        },
+        {
+          key: "siblings",
+          text: "How many siblings do you have?",
+          data_type: "select",
+          is_required: false,
+          options: ["0", "1", "2", "3", "4 or more"]
+        },
+        {
+          key: "family_in_iceland",
+          text: "Do you have any family members or relatives living in Iceland?",
+          data_type: "select",
+          is_required: false,
+          options: ["No", "Yes - Immediate family", "Yes - Extended family"]
+        },
+        {
+          key: "reason_to_return",
+          text: "What are your strongest ties to your home country that ensure you will return?",
+          data_type: "textarea",
+          is_required: false,
+          placeholder: "E.g., family responsibilities, business, property, job commitment"
+        }
+      ],
+      "Additional Information": [
+        {
+          key: "criminal_record",
+          text: "Do you have any criminal record or pending criminal cases?",
+          data_type: "select",
+          is_required: false,
+          options: ["No", "Yes - Minor offense", "Yes - Major offense", "Yes - Pending case"]
+        },
+        {
+          key: "medical_conditions",
+          text: "Do you have any medical conditions that require special attention?",
+          data_type: "select",
+          is_required: false,
+          options: ["No", "Yes - Minor", "Yes - Requires regular medication", "Yes - Serious condition"]
+        },
+        {
+          key: "travel_insurance",
+          text: "Do you have travel insurance covering your entire trip?",
+          data_type: "select",
+          is_required: false,
+          options: ["Yes - Already purchased", "Will purchase after visa approval", "Not yet decided"]
+        },
+        {
+          key: "emergency_contact_name",
+          text: "Emergency contact person's name (in home country):",
+          data_type: "text",
+          is_required: false,
+          placeholder: "Full name"
+        },
+        {
+          key: "emergency_contact_phone",
+          text: "Emergency contact person's phone number:",
+          data_type: "text",
+          is_required: false,
+          placeholder: "+880-XXXXXXXXXX"
+        },
+        {
+          key: "emergency_contact_relation",
+          text: "Relationship with emergency contact:",
+          data_type: "select",
+          is_required: false,
+          options: ["Spouse", "Parent", "Sibling", "Friend", "Other relative"]
+        },
+        {
+          key: "additional_info",
+          text: "Is there any additional information you would like to provide to support your application?",
+          data_type: "textarea",
+          is_required: false,
+          placeholder: "Any additional relevant information"
+        }
+      ]
     };
   },
 

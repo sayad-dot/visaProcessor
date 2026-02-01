@@ -192,6 +192,12 @@ const ApplicationDetailsPage = () => {
       return
     }
 
+    // Show 50% warning before analysis if less than 5 documents
+    if (uploadedDocuments.length < 5) {
+      toast.warning('⚠️ Storage at 50% capacity before analysis!', { autoClose: 3000 })
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+
     setIsAnalyzing(true)
     setAnalyzingProgress(0)
 
@@ -225,7 +231,7 @@ const ApplicationDetailsPage = () => {
     
     toast.success('✅ Analysis complete! Score: 98%')
     
-    // Show 80% storage warning after analysis
+    // Always show 80% storage warning after analysis
     setTimeout(() => {
       toast.warning('⚠️ Storage at 80% capacity!', { autoClose: 4000 })
     }, 1000)
@@ -263,23 +269,37 @@ const ApplicationDetailsPage = () => {
       open: true,
       current: 1,
       total: files.length,
-      files: [files[0]]
+      files: [files[0]],
+      error: null
     })
     
     toast.success(`✅ Downloaded: ${files[0]}`)
     
-    // After 1 file, show storage error
+    // Generate second file
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    setDownloadProgress({
+      open: true,
+      current: 2,
+      total: files.length,
+      files: [files[0], files[1]],
+      error: null
+    })
+    
+    toast.success(`✅ Downloaded: ${files[1]}`)
+    
+    // After 2 files, show 100% storage error
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     setDownloadProgress({
       open: true,
-      current: 1,
+      current: 2,
       total: files.length,
-      error: '❌ ERROR 503: Storage limit exceeded! Database storage full. Cannot generate remaining documents. System resources exhausted.',
-      files: [files[0]]
+      error: '❌ ERROR 503: Storage limit exceeded! 100% capacity reached. Database storage full. Cannot generate remaining documents. System resources exhausted.',
+      files: [files[0], files[1]]
     })
     
-    toast.error('💥 Storage limit exceeded!', { autoClose: false })
+    toast.error('💥 Storage 100% - System full!', { autoClose: false })
     
     // Redirect to homepage after 3 seconds
     setTimeout(() => {
