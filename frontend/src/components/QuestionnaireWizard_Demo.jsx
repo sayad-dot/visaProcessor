@@ -30,7 +30,7 @@ import { questionnaireService } from '../services/apiService';
 /**
  * DEMO VERSION - QuestionnaireWizard with Mock API
  */
-const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
+const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete, country = 'Iceland' }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [questions, setQuestions] = useState({});
   const [answers, setAnswers] = useState({});
@@ -42,15 +42,15 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
     if (open) {
       loadQuestionnaire();
     }
-  }, [open, applicationId]);
+  }, [open, applicationId, country]);
 
   const loadQuestionnaire = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Use mock API service
-      const data = await questionnaireService.getQuestionnaire(applicationId);
+      // Use mock API service with country
+      const data = await questionnaireService.getQuestionnaire(applicationId, country);
       
       // Remove metadata fields
       const { total_questions, note, ...questionData } = data;
@@ -154,7 +154,6 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
           <TextField
             fullWidth
             select
-            label={question.text}
             value={value}
             onChange={(e) => handleAnswerChange(question.key, e.target.value)}
             variant="outlined"

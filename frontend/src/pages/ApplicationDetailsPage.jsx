@@ -748,6 +748,7 @@ const ApplicationDetailsPage = () => {
         onClose={() => setQuestionnaireOpen(false)}
         applicationId={id}
         onComplete={handleQuestionnaireComplete}
+        country={application?.country || 'Iceland'}
       />
     </Container>
   )

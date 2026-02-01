@@ -175,8 +175,11 @@ export const mockApi = {
   },
 
   // Questionnaire
-  async getQuestionnaire(applicationId) {
+  async getQuestionnaire(applicationId, country = 'Iceland') {
     await delay(1000);
+    
+    // Replace Iceland with the selected country in all questions
+    const countryName = country || 'Iceland';
     
     return {
       "Personal Information": [
@@ -239,7 +242,7 @@ export const mockApi = {
       "Travel Information": [
         {
           key: "travel_purpose",
-          text: "What is the primary purpose of your visit to Iceland?",
+          text: `What is the primary purpose of your visit to ${countryName}?`,
           data_type: "select",
           is_required: false,
           options: ["Tourism", "Business", "Visiting Friends/Family", "Conference/Event", "Other"]
@@ -253,20 +256,20 @@ export const mockApi = {
         },
         {
           key: "travel_duration",
-          text: "How many days do you plan to stay in Iceland?",
+          text: `How many days do you plan to stay in ${countryName}?`,
           data_type: "number",
           is_required: false,
           placeholder: "Number of days"
         },
         {
           key: "arrival_date",
-          text: "When do you plan to arrive in Iceland?",
+          text: `When do you plan to arrive in ${countryName}?`,
           data_type: "date",
           is_required: false
         },
         {
           key: "departure_date",
-          text: "When do you plan to depart from Iceland?",
+          text: `When do you plan to depart from ${countryName}?`,
           data_type: "date",
           is_required: false
         },
@@ -444,7 +447,7 @@ export const mockApi = {
         },
         {
           key: "family_in_iceland",
-          text: "Do you have any family members or relatives living in Iceland?",
+          text: `Do you have any family members or relatives living in ${countryName}?`,
           data_type: "select",
           is_required: false,
           options: ["No", "Yes - Immediate family", "Yes - Extended family"]

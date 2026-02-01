@@ -121,8 +121,8 @@ export const analysisService = {
 
 // Questionnaire Service
 export const questionnaireService = {
-  getQuestionnaire: async (applicationId) => {
-    if (DEMO_MODE) return mockApi.getQuestionnaire(applicationId)
+  getQuestionnaire: async (applicationId, country = 'Iceland') => {
+    if (DEMO_MODE) return mockApi.getQuestionnaire(applicationId, country)
     const response = await api.get(`/api/questionnaire/generate/${applicationId}`)
     return response.data
   },
