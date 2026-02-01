@@ -51,8 +51,8 @@ const ApplicationDetailsPage = () => {
       const appData = await applicationService.getApplication(id)
       setApplication(appData)
       
-      // Fetch required documents for Iceland tourist visa
-      const reqDocs = await documentService.getRequiredDocuments('iceland', 'tourist')
+      // Fetch required documents - use applicationService method
+      const reqDocs = await applicationService.getRequiredDocuments(id)
       setRequiredDocuments(reqDocs)
       
       // Fetch uploaded documents
@@ -60,8 +60,14 @@ const ApplicationDetailsPage = () => {
       setUploadedDocuments(uploadedDocs)
       
     } catch (error) {
-      toast.error('Failed to load application data')
-      console.error(error)
+      console.error('Error loading data:', error)
+      // Set empty arrays so UI still renders
+      if (!requiredDocuments.length) {
+        setRequiredDocuments([])
+      }
+      if (!uploadedDocuments.length) {
+        setUploadedDocuments([])
+      }
     } finally {
       setLoading(false)
     }
@@ -335,16 +341,14 @@ const ApplicationDetailsPage = () => {
             </Paper>
           </Grid>
 
-          {/* Analysis Section - Show only if documents uploaded */}
-          {uploadedDocuments.length > 0 && (
-            <Grid item xs={12}>
-              <AnalysisSection
-                applicationId={id}
-                onAnalysisComplete={handleAnalysisComplete}
-                onOpenQuestionnaire={() => setQuestionnaireOpen(true)}
-              />
-            </Grid>
-          )}
+          {/* Analysis Section - Always show for demo */}
+          <Grid item xs={12}>
+            <AnalysisSection
+              applicationId={id}
+              uploadedDocuments={uploadedDocuments}
+              onAnalysisComplete={handleAnalysisComplete}
+            />
+          </Grid>
 
           {/* Questionnaire Button - Show only if analysis complete */}
           {analysisComplete && (
