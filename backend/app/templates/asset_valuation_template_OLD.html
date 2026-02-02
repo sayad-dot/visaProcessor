@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Property Valuation Survey Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+        }
+        
+        .page-break {
+            page-break-after: always;
+        }
+        
+        /* PAGE 1: COVER PAGE */
+        .cover-page {
+            text-align: center;
+            padding-top: 80px;
+            min-height: 800px;
+        }
+        
+        .main-title {
+            font-size: 32pt;
+            font-weight: bold;
+            color: #003366;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .sub-title {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #003366;
+            margin-bottom: 40px;
+        }
+        
+        .year {
+            font-size: 48pt;
+            font-weight: bold;
+            color: #003366;
+            margin: 40px 0;
+        }
+        
+        .owner-name {
+            font-size: 24pt;
+            font-weight: bold;
+            margin: 60px 0 40px 0;
+            color: #000;
+        }
+        
+        .valuer-info {
+            margin-top: 100px;
+            font-size: 14pt;
+        }
+        
+        .valuer-name {
+            font-weight: bold;
+            font-size: 16pt;
+            color: #003366;
+        }
+        
+        .company-name {
+            font-weight: bold;
+            font-size: 14pt;
+            margin: 10px 0;
+        }
+        
+        .report-date {
+            font-size: 13pt;
+            margin-top: 20px;
+        }
+        
+        .contact-info {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9pt;
+            color: #666;
+        }
+        
+        /* PAGE 2: TITLE PAGE */
+        .title-page {
+            padding-top: 100px;
+            text-align: center;
+        }
+        
+        .report-title {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .report-subtitle {
+            font-size: 14pt;
+            margin-bottom: 30px;
+        }
+        
+        .report-details {
+            text-align: left;
+            margin: 40px auto;
+            max-width: 500px;
+        }
+        
+        .report-details p {
+            margin: 8px 0;
+            font-size: 11pt;
+        }
+        
+        .owner-section {
+            margin-top: 60px;
+            text-align: left;
+            padding-left: 80px;
+        }
+        
+        .owner-section p {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+        
+        /* PAGE 3: SYNOPSIS */
+        .synopsis-page {
+            padding-top: 40px;
+        }
+        
+        .section-header {
+            font-size: 16pt;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .owner-info-box {
+            margin: 30px 0;
+            padding: 15px;
+            background: #f5f5f5;
+        }
+        
+        .owner-info-box p {
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        
+        .synopsis-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+        }
+        
+        .synopsis-table td {
+            border: 2px solid #000;
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
+        
+        .synopsis-table td:first-child {
+            background: #e8e8e8;
+            font-weight: bold;
+            width: 50%;
+        }
+        
+        .synopsis-table td:last-child {
+            text-align: right;
+            font-weight: bold;
+        }
+        
+        .synopsis-table .total-row td {
+            background: #d0d0d0;
+            font-size: 13pt;
+            font-weight: bold;
+        }
+        
+        .exchange-rate {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #003366;
+        }
+        
+        .exchange-rate p {
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        
+        /* PAGE 4: PROPERTY DETAILS */
+        .property-details {
+            padding-top: 40px;
+        }
+        
+        .property-header {
+            background: #003366;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            font-size: 13pt;
+            margin: 20px 0 15px 0;
+        }
+        
+        .property-content {
+            padding: 15px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        
+        .property-item {
+            margin: 12px 0;
+            padding-left: 20px;
+        }
+        
+        .property-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 200px;
+        }
+        
+        .schedule-box {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #003366;
+        }
+        
+        .schedule-title {
+            font-weight: bold;
+            font-size: 12pt;
+            color: #003366;
+            margin-bottom: 10px;
+        }
+        
+        /* PAGE 5: CERTIFICATION */
+        .certification-page {
+            padding-top: 60px;
+        }
+        
+        .cert-title {
+            font-size: 18pt;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+            color: #003366;
+        }
+        
+        .cert-content {
+            text-align: justify;
+            line-height: 1.8;
+            margin: 20px 0;
+        }
+        
+        .signature-section {
+            margin-top: 80px;
+        }
+        
+        .signature-box {
+            display: inline-block;
+            width: 45%;
+            text-align: center;
+            margin: 20px 2%;
+        }
+        
+        .signature-line {
+            border-top: 2px solid #000;
+            margin: 50px 20px 10px 20px;
+        }
+        
+        .signature-label {
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .stamp-area {
+            text-align: center;
+            margin-top: 40px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <!-- PAGE 1: COVER PAGE -->
+    <div class="cover-page">
+        <div class="main-title">PROPERTY VALUATION</div>
+        <div class="sub-title">SURVEY REPORT</div>
+        <div class="year">{{ year }}</div>
+        <div class="owner-name">{{ owner_name }}</div>
+        
+        <div class="valuer-info">
+            <div class="valuer-name">A.H.M MOSTOFA KAMAL</div>
+            <div class="company-name">KAMAL & ASSOCIATES</div>
+            <div class="report-date">{{ report_date }}</div>
+        </div>
+        
+        <div class="contact-info">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232<br>
+            E-mail: info.qrit@gmail.com
+        </div>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <!-- PAGE 2: TITLE PAGE -->
+    <div class="title-page">
+        <div class="report-title">VALUATION SURVEY REPORT</div>
+        <div class="report-subtitle">OF</div>
+        <div class="report-title">FLAT & LAND</div>
+        
+        <div class="report-details">
+            <p><strong>REPORT #</strong> K&A/AU - {{ report_number }}</p>
+            <p><strong>DATE:</strong> {{ report_date }}</p>
+            <p><strong>INCORPORATION CERTIFICATE #</strong> C-35197 (1943)/98</p>
+        </div>
+        
+        <div class="owner-section">
+            <p><strong>OWNER:</strong></p>
+            <p><strong>{{ owner_name }}</strong></p>
+            <p>{{ owner_father_relation }}</p>
+            <p><strong>PRESENT ADDRESS:</strong> {{ owner_address }}</p>
+        </div>
+        
+        <div style="margin-top: 80px; text-align: left; padding-left: 80px;">
+            <p><strong>NAME OF SURVEYOR:</strong></p>
+            <p><strong>A.H.M MOSTAFA KAMAL</strong></p>
+            <p>MANAGING DIRECTOR</p>
+            <p style="margin-top: 20px;"><strong>CONSULTANT:</strong></p>
+            <p><strong>SANJIDA ALAM SHARNA</strong></p>
+            <p>B.Sc. ENGINEER</p>
+        </div>
+        
+        <div class="contact-info">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232
+        </div>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <!-- PAGE 3: SYNOPSIS -->
+    <div class="synopsis-page">
+        <div class="section-header">S Y N O P S I S</div>
+        
+        <div class="owner-info-box">
+            <p>NAME OF THE OWNER</p>
+            <p>{{ owner_name }}</p>
+            <p>{{ owner_father_relation }}</p>
+        </div>
+        
+        <table class="synopsis-table">
+            <tr>
+                <td>NAME OF THE ASSET</td>
+                <td></td>
+                <td>ASSESSED VALUE</td>
+            </tr>
+            <tr>
+                <td>FLAT WITH PARKING</td>
+                <td>Tk.</td>
+                <td>{{ flat_value_1 }}</td>
+            </tr>
+            <tr>
+                <td>FLAT</td>
+                <td>Tk.</td>
+                <td>{{ flat_value_2 }}</td>
+            </tr>
+            <tr>
+                <td>FLAT</td>
+                <td>TK.</td>
+                <td>{{ flat_value_3 }}</td>
+            </tr>
+            <tr>
+                <td>PRIVATE CAR VALUE</td>
+                <td>TK.</td>
+                <td>{{ car_value }}</td>
+            </tr>
+            <tr>
+                <td>BUSINESS PRESENT MARKET VALUE IN BDT</td>
+                <td>TK</td>
+                <td>{{ business_value }}</td>
+            </tr>
+            <tr class="total-row">
+                <td>GRAND TOTAL</td>
+                <td>Tk.</td>
+                <td>{{ total_value }}</td>
+            </tr>
+        </table>
+        
+        <div class="exchange-rate">
+            <p>Rate of Exchange: 1 POUND = BANGLADESHI Tk. {{ exchange_rate }}</p>
+            <p>TOTAL POUND: {{ total_pounds }}</p>
+        </div>
+        
+        <div class="contact-info">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232
+        </div>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <!-- PAGE 4: PROPERTY DETAILS -->
+    <div class="property-details">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <p><strong>Ref #</strong> CIS/MISC - {{ reference_number }}</p>
+            <p><strong>Date:</strong> {{ report_date }}</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <p><strong>{{ owner_name }}</strong></p>
+            <p>{{ owner_father_relation }}</p>
+            <p>{{ owner_address }}</p>
+        </div>
+        
+        <div class="property-header">
+            VALUATION INSPECTION REPORT OF THE PROPERTY OF {{ owner_name }}
+        </div>
+        
+        <div class="property-content">
+            <p>Dear Sir,</p>
+            <p style="margin-top: 15px; text-align: justify;">
+                In response to your request, our skilled representative visited your premises 
+                to conduct property valuation inspection of below mentioned property:
+            </p>
+        </div>
+        
+        <div class="schedule-box">
+            <div class="schedule-title">Schedule - A: Residential Flat</div>
+            <div class="property-item">
+                <span class="property-label">Location:</span> {{ property_location_1 }}
+            </div>
+            <div class="property-item">
+                <span class="property-label">Flat Size:</span> {{ property_size_1 }} sqft
+            </div>
+            <div class="property-item">
+                <span class="property-label">Assessed Value:</span> Tk. {{ flat_value_1 }}
+            </div>
+        </div>
+        
+        <div class="schedule-box">
+            <div class="schedule-title">Schedule - B: Residential Flat</div>
+            <div class="property-item">
+                <span class="property-label">Location:</span> {{ property_location_2 }}
+            </div>
+            <div class="property-item">
+                <span class="property-label">Flat Size:</span> {{ property_size_2 }} sqft
+            </div>
+            <div class="property-item">
+                <span class="property-label">Assessed Value:</span> Tk. {{ flat_value_2 }}
+            </div>
+        </div>
+        
+        <div class="schedule-box">
+            <div class="schedule-title">Schedule - C: Residential Flat</div>
+            <div class="property-item">
+                <span class="property-label">Location:</span> {{ property_location_3 }}
+            </div>
+            <div class="property-item">
+                <span class="property-label">Flat Size:</span> {{ property_size_3 }} sqft
+            </div>
+            <div class="property-item">
+                <span class="property-label">Assessed Value:</span> Tk. {{ flat_value_3 }}
+            </div>
+        </div>
+        
+        <div class="schedule-box">
+            <div class="schedule-title">Schedule - D: Motor Vehicle</div>
+            <div class="property-item">
+                <span class="property-label">Vehicle Type:</span> {{ vehicle_type }}
+            </div>
+            <div class="property-item">
+                <span class="property-label">Registration No:</span> {{ vehicle_reg }}
+            </div>
+            <div class="property-item">
+                <span class="property-label">Manufacturer:</span> {{ vehicle_manufacturer }}
+            </div>
+            <div class="property-item">
+                <span class="property-label">Assessed Value:</span> Tk. {{ car_value }}
+            </div>
+        </div>
+        
+        <div class="schedule-box">
+            <div class="schedule-title">Schedule - E: Business</div>
+            <div class="property-item">
+                <span class="property-label">Business Name:</span> {{ business_name }}
+            </div>
+            <div class="property-item">
+                <span class="property-label">Business Type:</span> {{ business_type }}
+            </div>
+            <div class="property-item">
+                <span class="property-label">Location:</span> {{ business_location }}
+            </div>
+            <div class="property-item">
+                <span class="property-label">Assessed Value:</span> Tk. {{ business_value }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <!-- PAGE 5: CERTIFICATION -->
+    <div class="certification-page">
+        <div class="cert-title">PROFESSIONAL CERTIFICATION</div>
+        
+        <div class="cert-content">
+            <p>
+                We hereby certify that this valuation report has been prepared in accordance 
+                with recognized valuation standards and best practices. The values stated herein 
+                represent our professional opinion of Fair Market Value as of {{ report_date }}.
+            </p>
+            
+            <p style="margin-top: 20px;">
+                This valuation has been conducted independently and impartially. All information 
+                provided is based on available documents, physical inspection, and current market data. 
+                The values represent fair market estimates for official documentation purposes.
+            </p>
+            
+            <p style="margin-top: 20px;">
+                This report is valid for 6 months from the date of issue and is prepared specifically 
+                for visa application and official purposes.
+            </p>
+        </div>
+        
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-label">Authorized Valuer</div>
+                <p style="margin-top: 10px;">A.H.M MOSTAFA KAMAL</p>
+                <p>Managing Director</p>
+                <p>Kamal & Associates</p>
+            </div>
+            
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-label">Technical Consultant</div>
+                <p style="margin-top: 10px;">SANJIDA ALAM SHARNA</p>
+                <p>B.Sc. Engineer</p>
+            </div>
+        </div>
+        
+        <div class="stamp-area">
+            <p>[OFFICIAL SEAL]</p>
+            <p style="margin-top: 20px;">Date: {{ report_date }}</p>
+        </div>
+        
+        <div style="position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; font-size: 9pt; color: #666;">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232 | E-mail: info.qrit@gmail.com
+        </div>
+    </div>
+</body>
+</html>

@@ -41,7 +41,7 @@ const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
   const [progress, setProgress] = useState(0);
   const [currentDocument, setCurrentDocument] = useState(null);
   const [documentsCompleted, setDocumentsCompleted] = useState(0);
-  const [totalDocuments, setTotalDocuments] = useState(8);
+  const [totalDocuments, setTotalDocuments] = useState(0); // Dynamic from backend
   const [completedDocuments, setCompletedDocuments] = useState([]);
   const [errors, setErrors] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -67,7 +67,7 @@ const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
     { key: 'financial_statement', name: 'Financial Statement', category: 'generated' },
   ];
 
-  // Document type display names for generation
+  // Document type display names for generation (ALL 13 AI-generatable documents)
   const docTypeNames = {
     cover_letter: 'Cover Letter',
     nid_english: 'NID English Translation',
@@ -76,10 +76,38 @@ const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
     travel_itinerary: 'Travel Itinerary',
     travel_history: 'Travel History',
     home_tie_statement: 'Home Tie Statement',
-    asset_valuation: 'Asset Valuation Certificate'
+    asset_valuation: 'Asset Valuation Certificate',
+    tin_certificate: 'TIN Certificate',
+    tax_certificate: 'Tax Certificate',
+    trade_license: 'Trade License',
+    hotel_booking: 'Hotel Booking',
+    air_ticket: 'Air Ticket'
   };
 
-  // Poll for status updates
+  // Initial status check on component mount to get dynamic document count
+  useEffect(() => {
+    const fetchInitialStatus = async () => {
+      try {
+        const response = await axios.get(
+          `${API_BASE_URL}/generate/${applicationId}/status`
+        );
+        const data = response.data;
+        setTotalDocuments(data.total_documents); // Get dynamic count on load
+        if (data.status !== 'not_started') {
+          setStatus(data.status);
+          setProgress(data.progress);
+          setDocumentsCompleted(data.documents_completed);
+          setCompletedDocuments(data.completed_documents || []);
+        }
+      } catch (error) {
+        console.error('Error fetching initial status:', error);
+      }
+    };
+    
+    fetchInitialStatus();
+  }, [applicationId]);
+
+  // Poll for status updates during generation
   useEffect(() => {
     let interval;
     
@@ -95,6 +123,7 @@ const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
           setProgress(data.progress);
           setCurrentDocument(data.current_document);
           setDocumentsCompleted(data.documents_completed);
+          setTotalDocuments(data.total_documents); // Get dynamic count from backend
           setCompletedDocuments(data.completed_documents || []);
           setErrors(data.errors || []);
           
@@ -176,6 +205,7 @@ const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
         borderRadius: 3,
         overflow: 'hidden'
       }}
+      data-section="generation"
     >
       {/* Header */}
       <Box
@@ -194,7 +224,7 @@ const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
               📄 AI Document Generation
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              Generate {totalDocuments} professional documents with AI
+              {totalDocuments > 0 ? `Generate ${totalDocuments} professional documents with AI` : 'Loading document count...'}
             </Typography>
           </Box>
         </Box>
@@ -272,7 +302,7 @@ const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
               ✅ All {documentsCompleted} documents generated successfully!
             </Typography>
             <Typography variant="body2" sx={{ mt: 0.5 }}>
-              Click the download button to get all 16 documents in a ZIP file.
+              Click the download button to get all documents in a ZIP file.
             </Typography>
           </Alert>
         )}

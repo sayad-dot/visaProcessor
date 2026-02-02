@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Property Valuation Survey Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #000;
+        }
+        
+        .page-break {
+            page-break-after: always;
+        }
+        
+        /* PAGE 1: COVER PAGE - Matching the design */
+        .cover-page {
+            position: relative;
+            height: 297mm;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Top section with title and year */
+        .cover-header {
+            display: flex;
+            margin-top: 0;
+        }
+        
+        .title-section {
+            width: 60%;
+            background: #4a7ba7;
+            color: white;
+            padding: 40px 30px;
+        }
+        
+        .main-title {
+            font-size: 28pt;
+            font-weight: bold;
+            line-height: 1.3;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .owner-name-header {
+            font-size: 18pt;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .year-section {
+            width: 40%;
+            background: #a4c639;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .year {
+            font-size: 72pt;
+            font-weight: bold;
+            color: white;
+        }
+        
+        /* Middle section with image */
+        .cover-middle {
+            flex: 1;
+            position: relative;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        
+        .watermark {
+            position: absolute;
+            font-size: 120pt;
+            font-weight: bold;
+            color: rgba(164, 198, 57, 0.08);
+            z-index: 1;
+            left: 50px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: 'Impact', 'Arial Black', sans-serif;
+            letter-spacing: 5px;
+        }
+        
+        .property-placeholder {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 60px;
+            border: 3px solid #e0e0e0;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            max-width: 500px;
+        }
+        
+        .property-placeholder p {
+            font-size: 14pt;
+            color: #666;
+            margin: 10px 0;
+        }
+        
+        /* Bottom section */
+        .cover-footer {
+            background: white;
+            padding: 20px 40px;
+            text-align: right;
+            border-top: 3px solid #4a7ba7;
+        }
+        
+        .valuer-name {
+            font-size: 13pt;
+            font-weight: bold;
+            color: #4a7ba7;
+        }
+        
+        /* PAGE 2: TITLE/DETAILS PAGE */
+        .title-page {
+            padding: 60px 50px;
+            background: white;
+            min-height: 297mm;
+        }
+        
+        .company-header {
+            text-align: left;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #4a7ba7;
+        }
+        
+        .company-name {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #4a7ba7;
+            margin-bottom: 5px;
+        }
+        
+        .company-tagline {
+            font-size: 10pt;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .report-title-section {
+            text-align: center;
+            margin: 50px 0;
+        }
+        
+        .report-main-title {
+            font-size: 20pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .report-subtitle {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #4a7ba7;
+            margin-bottom: 30px;
+        }
+        
+        .report-details {
+            margin: 40px 0;
+            line-height: 2;
+        }
+        
+        .detail-row {
+            display: flex;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            width: 200px;
+            color: #333;
+        }
+        
+        .detail-value {
+            flex: 1;
+            color: #666;
+        }
+        
+        /* PAGE 3: SYNOPSIS TABLE */
+        .synopsis-page {
+            padding: 60px 50px;
+            background: white;
+        }
+        
+        .section-title {
+            font-size: 18pt;
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            color: #4a7ba7;
+            margin-bottom: 40px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #4a7ba7;
+            letter-spacing: 2px;
+        }
+        
+        .synopsis-intro {
+            margin-bottom: 30px;
+            font-size: 11pt;
+            line-height: 1.8;
+        }
+        
+        .owner-info {
+            background: #f8f8f8;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #4a7ba7;
+        }
+        
+        .owner-info p {
+            margin: 5px 0;
+            font-size: 11pt;
+        }
+        
+        .owner-info strong {
+            color: #4a7ba7;
+        }
+        
+        .valuation-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+        }
+        
+        .valuation-table th {
+            background: #4a7ba7;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 11pt;
+        }
+        
+        .valuation-table td {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            font-size: 10.5pt;
+        }
+        
+        .valuation-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .valuation-table .amount {
+            text-align: right;
+            font-weight: 600;
+        }
+        
+        .total-row {
+            background: #e8f0f7 !important;
+            font-weight: bold;
+        }
+        
+        .total-row td {
+            font-size: 12pt;
+            color: #4a7ba7;
+            border-top: 2px solid #4a7ba7;
+        }
+        
+        .exchange-rate {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff8dc;
+            border-left: 4px solid #f59e0b;
+            font-size: 10pt;
+        }
+        
+        /* PAGE 4: PROPERTY DETAILS */
+        .details-page {
+            padding: 60px 50px;
+            background: white;
+        }
+        
+        .property-section {
+            margin-bottom: 40px;
+        }
+        
+        .subsection-title {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #4a7ba7;
+            margin: 25px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .property-grid {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .property-label {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .property-value {
+            color: #666;
+        }
+        
+        .notes-box {
+            background: #f8f8f8;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #a4c639;
+            font-size: 10pt;
+            line-height: 1.6;
+        }
+        
+        /* PAGE 5: CERTIFICATION - NO SIGNATURE CIRCLES */
+        .certification-page {
+            padding: 60px 50px;
+            background: white;
+        }
+        
+        .certification-text {
+            margin: 20px 0;
+            line-height: 1.8;
+            text-align: justify;
+        }
+        
+        .declaration-box {
+            background: #f8f8f8;
+            padding: 20px;
+            margin: 30px 0;
+            border: 2px solid #4a7ba7;
+        }
+        
+        .declaration-box p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        
+        .signature-section {
+            margin-top: 80px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature-block {
+            text-align: center;
+            min-width: 200px;
+        }
+        
+        .signature-line {
+            border-top: 2px solid #333;
+            margin-bottom: 10px;
+            margin-top: 60px;
+        }
+        
+        .signature-label {
+            font-weight: bold;
+            font-size: 10pt;
+            margin-top: 5px;
+        }
+        
+        .signature-details {
+            font-size: 9pt;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .official-seal {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            border: 3px solid #4a7ba7;
+            display: inline-block;
+            font-weight: bold;
+            color: #4a7ba7;
+            min-width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <!-- PAGE 1: COVER PAGE -->
+    <div class="cover-page">
+        <div class="cover-header">
+            <div class="title-section">
+                <div class="main-title">PROPERTY VALUATION<br>SURVEY REPORT</div>
+                <div class="owner-name-header">{{ owner_name }}</div>
+            </div>
+            <div class="year-section">
+                <div class="year">2025</div>
+            </div>
+        </div>
+        
+        <div class="cover-middle">
+            <div class="watermark">Kamal</div>
+            <div class="property-placeholder">
+                <p><strong>Property Valuation Certificate</strong></p>
+                <p>For Visa Application Purpose</p>
+                <p style="margin-top: 20px; color: #4a7ba7; font-weight: bold;">Comprehensive Asset Assessment</p>
+            </div>
+        </div>
+        
+        <div class="cover-footer">
+            <div class="valuer-name">A H M MOSTOFA KAMAL</div>
+        </div>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <!-- PAGE 2: TITLE/DETAILS PAGE -->
+    <div class="title-page">
+        <div class="company-header">
+            <div class="company-name">Kamal & Associates</div>
+            <div class="company-tagline">Professional Valuation Services</div>
+        </div>
+        
+        <div class="report-title-section">
+            <div class="report-main-title">VALUATION SURVEY REPORT OF</div>
+            <div class="report-subtitle">PROPERTIES OWNED BY</div>
+        </div>
+        
+        <div class="report-details">
+            <div class="detail-row">
+                <div class="detail-label">Name of Applicant:</div>
+                <div class="detail-value">{{ owner_name }}<br>{{ owner_father_relation }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Property Address:</div>
+                <div class="detail-value">{{ owner_address }}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Report Reference:</div>
+                <div class="detail-value">CIS/MISC - 2527/2025</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Date of Inspection:</div>
+                <div class="detail-value">November 08, 2025</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Purpose of Valuation:</div>
+                <div class="detail-value">Visa Application - Embassy Submission</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 60px; text-align: center; color: #666; font-size: 10pt;">
+            <p>This valuation has been conducted based on physical inspection and market analysis</p>
+            <p>as per requirements for embassy documentation purposes.</p>
+        </div>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <!-- PAGE 3: SYNOPSIS -->
+    <div class="synopsis-page">
+        <div class="section-title">SYNOPSIS</div>
+        
+        <div class="synopsis-intro">
+            In response to your request, our skilled representative visited the premises to conduct property 
+            valuation inspection of the below mentioned property.
+        </div>
+        
+        <div class="owner-info">
+            <p><strong>Name of the Owner:</strong> {{ owner_name }}</p>
+            <p><strong>Son/Daughter of:</strong> {{ owner_father_relation }}</p>
+            <p><strong>Address:</strong> {{ owner_address }}</p>
+        </div>
+        
+        <table class="valuation-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">SL</th>
+                    <th>NAME OF THE ASSET</th>
+                    <th style="width: 200px; text-align: right;">ASSESSED VALUE</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>FLAT WITH PARKING</td>
+                    <td class="amount">Tk. {{ flat_value_1 }}</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>FLAT</td>
+                    <td class="amount">Tk. {{ flat_value_2 }}</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>FLAT</td>
+                    <td class="amount">Tk. {{ flat_value_3 }}</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>PRIVATE CAR VALUE</td>
+                    <td class="amount">Tk. {{ car_value }}</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>BUSINESS PRESENT MARKET VALUE IN BDT</td>
+                    <td class="amount">Tk. {{ business_value }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="2"><strong>GRAND TOTAL</strong></td>
+                    <td class="amount">Tk. {{ total_value }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="exchange-rate">
+            <p><strong>Rate of Exchange:</strong></p>
+            <p>1 POUND = BANGLADESHI Tk 160.57 &nbsp;&nbsp;&nbsp; <strong>TOTAL POUND: {{ total_pound }}</strong></p>
+        </div>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <!-- PAGE 4: PROPERTY DETAILS -->
+    <div class="details-page">
+        <div class="section-title">VALUATION INSPECTION REPORT</div>
+        
+        <div class="property-section">
+            <div class="subsection-title">01. General Information</div>
+            <div class="property-grid">
+                <div class="property-label">Name of Applicant:</div>
+                <div class="property-value">{{ owner_name }}, {{ owner_father_relation }}</div>
+                
+                <div class="property-label">Address:</div>
+                <div class="property-value">{{ owner_address }}</div>
+            </div>
+        </div>
+        
+        <div class="property-section">
+            <div class="subsection-title">02. Location of the Building</div>
+            <div class="property-grid">
+                <div class="property-label">Owner:</div>
+                <div class="property-value">{{ owner_name }}, {{ owner_father_relation }}</div>
+                
+                <div class="property-label">Schedule - A:</div>
+                <div class="property-value">The Flat as per documents has been found correct after physical measurement and located at 
+                <strong>House - 38, Level 07, Road - 01, Sector - 02, Block - F, Aftabnagar, Badda, Gulshan - 1212, Dhaka, Bangladesh.</strong></div>
+            </div>
+        </div>
+        
+        <div class="property-section">
+            <div class="subsection-title">03. Basis of Valuation</div>
+            <p style="line-height: 1.8; margin: 15px 0;">
+                The valuation has been conducted using the <strong>Market Comparison Approach</strong>, 
+                comparing with similar properties in the same locality. Current market rates, location advantages, 
+                amenities, and overall property condition have been considered in the assessment.
+            </p>
+        </div>
+        
+        <div class="property-section">
+            <div class="subsection-title">04. Business Valuation</div>
+            <div class="property-grid">
+                <div class="property-label">Business Name:</div>
+                <div class="property-value">{{ business_name }}</div>
+                
+                <div class="property-label">Business Type:</div>
+                <div class="property-value">{{ business_type }}</div>
+                
+                <div class="property-label">Valuation Method:</div>
+                <div class="property-value">Net Asset Value Method - Based on current market conditions and business performance</div>
+            </div>
+        </div>
+        
+        <div class="notes-box">
+            <strong>Note:</strong> All valuations are conducted for visa application purposes and represent 
+            fair market values as of the inspection date. Values may fluctuate based on market conditions.
+        </div>
+    </div>
+    
+    <div class="page-break"></div>
+    
+    <!-- PAGE 5: CERTIFICATION (NO CIRCLES) -->
+    <div class="certification-page">
+        <div class="section-title">CERTIFICATION & DECLARATION</div>
+        
+        <div class="certification-text">
+            <p>
+                We hereby certify that this valuation report has been prepared in accordance with 
+                recognized valuation standards and best practices. The values stated represent our 
+                professional opinion of Fair Market Value as of the inspection date.
+            </p>
+        </div>
+        
+        <div class="declaration-box">
+            <p><strong>Professional Declaration:</strong></p>
+            <p>I, the undersigned, being a qualified and registered valuer, do hereby declare that:</p>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>This valuation has been conducted independently and impartially</li>
+                <li>All information provided is based on physical inspection and market data</li>
+                <li>The values represent fair market estimates for visa documentation purposes</li>
+                <li>This report is valid for 6 months from the date of issue</li>
+            </ul>
+        </div>
+        
+        <div class="certification-text" style="margin-top: 30px;">
+            <p><strong>Limitations:</strong></p>
+            <p>
+                This valuation is provided specifically for embassy/consulate submission for visa purposes. 
+                It should not be used for any other purpose without our written consent. We accept no liability 
+                for decisions made based on this report by third parties.
+            </p>
+        </div>
+        
+        <div class="signature-section">
+            <div class="signature-block">
+                <div class="signature-line"></div>
+                <div class="signature-label">Authorized Valuer</div>
+                <div class="signature-details">A H M MOSTOFA KAMAL</div>
+                <div class="signature-details">Kamal & Associates</div>
+                <div class="signature-details">License No: KA/2024/BD/001</div>
+            </div>
+            
+            <div class="signature-block">
+                <div style="margin-top: 40px; text-align: center;">
+                    <div class="official-seal">OFFICIAL SEAL</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 50px; text-align: center; font-size: 10pt; color: #666;">
+            <p><strong>Date:</strong> November 08, 2025</p>
+            <p style="margin-top: 10px;">Kamal & Associates | Gulshan, Dhaka 1212, Bangladesh</p>
+        </div>
+    </div>
+</body>
+</html>

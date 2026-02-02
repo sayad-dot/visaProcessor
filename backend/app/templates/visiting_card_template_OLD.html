@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Business Card</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @page {
+            size: 3.5in 2in;
+            margin: 0;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 2in;
+        }
+        
+        .business-card {
+            width: 3.5in;
+            height: 2in;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #3b82f6 100%);
+            position: relative;
+            overflow: hidden;
+            padding: 0.3in;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        /* Decorative circles */
+        .circle-decoration {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+        }
+        
+        .circle-1 {
+            width: 1.5in;
+            height: 1.5in;
+            background: #fbbf24;
+            top: -0.5in;
+            right: -0.3in;
+        }
+        
+        .circle-2 {
+            width: 1in;
+            height: 1in;
+            background: #fbbf24;
+            bottom: -0.3in;
+            left: -0.2in;
+        }
+        
+        .content {
+            position: relative;
+            z-index: 10;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .name {
+            font-size: 22pt;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .designation {
+            font-size: 11pt;
+            color: #fbbf24;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.15in;
+        }
+        
+        .contact-info {
+            color: white;
+            font-size: 9pt;
+            line-height: 1.4;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+        
+        .icon {
+            width: 12pt;
+            height: 12pt;
+            margin-right: 6pt;
+            background: rgba(251, 191, 36, 0.3);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8pt;
+            flex-shrink: 0;
+        }
+        
+        .contact-text {
+            color: rgba(255, 255, 255, 0.95);
+            word-break: break-word;
+        }
+        
+        /* Print optimization */
+        @media print {
+            body {
+                margin: 0;
+            }
+            .business-card {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="business-card">
+        <!-- Decorative circles -->
+        <div class="circle-decoration circle-1"></div>
+        <div class="circle-decoration circle-2"></div>
+        
+        <div class="content">
+            <div>
+                <div class="name">{{ full_name }}</div>
+                <div class="designation">{{ designation }}</div>
+            </div>
+            
+            <div class="contact-info">
+                <div class="contact-item">
+                    <div class="icon">📞</div>
+                    <div class="contact-text">{{ phone }}</div>
+                </div>
+                <div class="contact-item">
+                    <div class="icon">✉️</div>
+                    <div class="contact-text">{{ email }}</div>
+                </div>
+                <div class="contact-item">
+                    <div class="icon">🌐</div>
+                    <div class="contact-text">{{ website }}</div>
+                </div>
+                <div class="contact-item">
+                    <div class="icon">📍</div>
+                    <div class="contact-text">{{ address }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

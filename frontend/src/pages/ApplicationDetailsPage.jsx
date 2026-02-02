@@ -23,7 +23,7 @@ import ProgressTracker from '../components/ProgressTracker'
 import DocumentList from '../components/DocumentList'
 import DocumentUploader from '../components/DocumentUploader'
 import AnalysisSection from '../components/AnalysisSection'
-import QuestionnaireWizard from '../components/QuestionnaireWizard'
+import SimpleQuestionnaireWizard from '../components/SimpleQuestionnaireWizard'
 import GenerationSection from '../components/GenerationSection'
 
 const ApplicationDetailsPage = () => {
@@ -38,6 +38,7 @@ const ApplicationDetailsPage = () => {
   const [processing, setProcessing] = useState(false)
   const [questionnaireOpen, setQuestionnaireOpen] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(false)
+  const [questionnaireComplete, setQuestionnaireComplete] = useState(false)
 
   useEffect(() => {
     fetchApplicationData()
@@ -58,6 +59,34 @@ const ApplicationDetailsPage = () => {
       // Fetch uploaded documents
       const uploadedDocs = await documentService.getApplicationDocuments(id)
       setUploadedDocuments(uploadedDocs)
+      
+      // Check if analysis is complete
+      try {
+        const analysisResponse = await fetch(`http://localhost:8000/api/analysis/status/${id}`)
+        if (analysisResponse.ok) {
+          const analysisData = await analysisResponse.json()
+          if (analysisData.status === 'completed') {
+            setAnalysisComplete(true)
+          }
+        }
+      } catch (error) {
+        console.log('No analysis found yet')
+      }
+      
+      // Check if questionnaire is complete
+      try {
+        const questionnaireResponse = await fetch(`http://localhost:8000/api/questionnaire/responses/${id}`)
+        if (questionnaireResponse.ok) {
+          const questionnaireData = await questionnaireResponse.json()
+          // If there are responses, consider questionnaire complete
+          if (questionnaireData && Object.keys(questionnaireData).length > 0) {
+            setQuestionnaireComplete(true)
+            setAnalysisComplete(true) // Also set analysis complete if questionnaire is done
+          }
+        }
+      } catch (error) {
+        console.log('No questionnaire responses yet')
+      }
       
     } catch (error) {
       toast.error('Failed to load application data')
@@ -148,6 +177,7 @@ const ApplicationDetailsPage = () => {
 
   const handleQuestionnaireComplete = () => {
     toast.success('Questionnaire completed! Ready for document generation.')
+    setQuestionnaireComplete(true)
     fetchApplicationData()
   }
 
@@ -346,8 +376,8 @@ const ApplicationDetailsPage = () => {
             </Grid>
           )}
 
-          {/* Questionnaire Button - Show only if analysis complete */}
-          {analysisComplete && (
+          {/* Questionnaire Button - Show only if analysis complete but questionnaire not complete */}
+          {analysisComplete && !questionnaireComplete && (
             <Grid item xs={12}>
               <Paper sx={{ p: 3, textAlign: 'center' }}>
                 <Typography variant="h6" gutterBottom>
@@ -368,8 +398,8 @@ const ApplicationDetailsPage = () => {
             </Grid>
           )}
 
-          {/* Document Generation Section - Show after questionnaire */}
-          {analysisComplete && (
+          {/* Document Generation Section - Show only after questionnaire is complete */}
+          {questionnaireComplete && (
             <Grid item xs={12}>
               <GenerationSection 
                 applicationId={id} 
@@ -408,7 +438,7 @@ const ApplicationDetailsPage = () => {
       </Dialog>
 
       {/* Questionnaire Wizard Dialog */}
-      <QuestionnaireWizard
+      <SimpleQuestionnaireWizard
         open={questionnaireOpen}
         onClose={() => setQuestionnaireOpen(false)}
         applicationId={id}

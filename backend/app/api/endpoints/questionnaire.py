@@ -1,337 +1,118 @@
 """
-Questionnaire API endpoints - Generate and manage questionnaire responses
-INTELLIGENT SYSTEM: Generates dynamic questions based on uploaded documents and missing information
+Questionnaire API endpoints - SIMPLIFIED VERSION
+Fixed 4-section structure: Personal, Travel, Financial, Other
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import Dict, List
+from typing import Dict
 from datetime import datetime
 from loguru import logger
 
 from app.database import get_db
-from app.models import (
-    VisaApplication, ExtractedData, QuestionnaireResponse,
-    QuestionCategory, QuestionDataType, Document
-)
-from app.schemas import (
-    QuestionnaireGenerateResponse, SaveQuestionnaireRequest,
-    QuestionnaireProgressResponse, QuestionResponse
-)
-from app.services.intelligent_questionnaire_analyzer import get_intelligent_analyzer
+from app.models import VisaApplication, QuestionnaireResponse, Document, QuestionCategory, QuestionDataType, DocumentType
+from app.schemas import SaveQuestionnaireRequest, QuestionnaireProgressResponse
+from app.services.simple_questionnaire_generator import SimpleQuestionnaireGenerator
 
 router = APIRouter()
 
-
-@router.get("/generate/{application_id}", response_model=Dict)
-async def generate_questionnaire(
-    application_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    ✨ INTELLIGENT QUESTIONNAIRE GENERATION ✨
-    
-    Analyzes uploaded documents and generates dynamic questions based on:
-    1. Which documents are uploaded vs missing
-    2. What information is already extracted
-    3. What information is needed to generate missing documents
-    4. Low-confidence extractions that need verification
-    
-    Returns ONLY questions for missing information - no fixed questions!
-    ALL questions are OPTIONAL - user can skip any they don't want to answer.
-    """
-    # Check if application exists
+@router.get("/generate/{application_id}")
+async def generate_questionnaire(application_id: int, db: Session = Depends(get_db)):
     application = db.query(VisaApplication).filter(VisaApplication.id == application_id).first()
     if not application:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Application not found"
-        )
+        raise HTTPException(status_code=404, detail="Application not found")
     
-    # Get extracted data
-    extracted_data_list = db.query(ExtractedData).filter(
-        ExtractedData.application_id == application_id
-    ).all()
-    
-    if not extracted_data_list:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No analysis data found. Please run document analysis first."
-        )
-    
-    # Convert to dict
-    extracted_data_dict = {}
-    for ed in extracted_data_list:
-        extracted_data_dict[ed.document_type.value] = ed.data
-    
-    # Get uploaded document types
     uploaded_docs = db.query(Document).filter(
         Document.application_id == application_id,
         Document.is_uploaded == True
     ).all()
     uploaded_doc_types = [doc.document_type for doc in uploaded_docs]
     
-    logger.info(f"📤 Generating intelligent questionnaire for application {application_id}")
-    logger.info(f"📊 Uploaded: {len(uploaded_doc_types)} documents, Missing: {16 - len(uploaded_doc_types)} documents")
+    logger.info(f"📤 Generating simple questionnaire for application {application_id}")
     
-    # ===== USE INTELLIGENT ANALYZER =====
-    analyzer = get_intelligent_analyzer()
-    questions_list, analysis_summary = analyzer.analyze_and_generate_questions(
-        uploaded_documents=uploaded_doc_types,
-        extracted_data=extracted_data_dict,
-        target_country=application.country,
-        visa_type=application.visa_type
-    )
-    
-    # Group questions by category for better UX
-    questions_by_category = analyzer.group_questions_by_category(questions_list)
-    
-    # Save questions to database for tracking
-    for category_name, questions in questions_by_category.items():
-        for question_req in questions:
-            # Check if question already exists
-            existing = db.query(QuestionnaireResponse).filter(
-                QuestionnaireResponse.application_id == application_id,
-                QuestionnaireResponse.question_key == question_req.field_key
-            ).first()
-            
-            if not existing:
-                # Determine category enum
-                category_enum = QuestionCategory.PERSONAL  # Default
-                if 'business' in category_name or 'employment' in category_name:
-                    category_enum = QuestionCategory.BUSINESS
-                elif 'travel' in category_name:
-                    category_enum = QuestionCategory.TRAVEL_PURPOSE
-                elif 'financial' in category_name:
-                    category_enum = QuestionCategory.FINANCIAL
-                elif 'assets' in category_name:
-                    category_enum = QuestionCategory.ASSETS
-                elif 'home_ties' in category_name:
-                    category_enum = QuestionCategory.HOME_TIES
-                
-                # Determine data type enum
-                data_type_map = {
-                    "text": QuestionDataType.TEXT,
-                    "textarea": QuestionDataType.TEXTAREA,
-                    "date": QuestionDataType.DATE,
-                    "number": QuestionDataType.NUMBER,
-                    "boolean": QuestionDataType.BOOLEAN,
-                    "select": QuestionDataType.SELECT,
-                    "email": QuestionDataType.EMAIL
-                }
-                data_type_enum = data_type_map.get(question_req.data_type, QuestionDataType.TEXT)
-                
-                # ===== CRITICAL: ALL QUESTIONS ARE OPTIONAL =====
-                qr = QuestionnaireResponse(
-                    application_id=application_id,
-                    category=category_enum,
-                    question_key=question_req.field_key,
-                    question_text=question_req.question,
-                    data_type=data_type_enum,
-                    is_required=False,  # ← ALL QUESTIONS OPTIONAL
-                    options=question_req.options if question_req.options else None
-                )
-                db.add(qr)
-    
-    db.commit()
-    
-    # Convert to response format
-    response_by_category = {}
-    for category_name, questions in questions_by_category.items():
-        response_by_category[category_name] = [
-            {
-                "key": q.field_key,
-                "text": q.question,
-                "data_type": q.data_type,
-                "priority": q.priority,
-                "is_required": False,  # ← ALL OPTIONAL
-                "options": q.options if q.options else [],
-                "placeholder": q.placeholder,
-                "help_text": q.help_text
-            }
-            for q in questions
-        ]
-    
-    total_questions = sum(len(q) for q in response_by_category.values())
-    
-    logger.info(f"✅ Generated {total_questions} intelligent questions across {len(response_by_category)} categories")
-    
-    # Add metadata to response
-    result = response_by_category.copy()
-    result["total_questions"] = total_questions
-    result["analysis_summary"] = analysis_summary
-    result["note"] = "All questions are OPTIONAL. Answer only what you want to provide."
-    
-    return result
-
-
-@router.post("/response/{application_id}")
-async def save_responses(
-    application_id: int,
-    request: SaveQuestionnaireRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    Save user's questionnaire responses
-    """
-    # Check if application exists
-    application = db.query(VisaApplication).filter(VisaApplication.id == application_id).first()
-    if not application:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Application not found"
-        )
-    
-    saved_count = 0
-    errors = []
-    
-    for response in request.responses:
-        try:
-            # Find the question
-            question = db.query(QuestionnaireResponse).filter(
-                QuestionnaireResponse.application_id == application_id,
-                QuestionnaireResponse.question_key == response.question_key
-            ).first()
-            
-            if not question:
-                errors.append(f"Question not found: {response.question_key}")
-                continue
-            
-            # Update answer
-            question.answer = response.answer
-            question.answered_at = datetime.now()
-            saved_count += 1
-            
-        except Exception as e:
-            logger.error(f"Error saving response for {response.question_key}: {str(e)}")
-            errors.append(f"{response.question_key}: {str(e)}")
-    
-    db.commit()
-    
-    logger.info(f"Saved {saved_count} responses for application {application_id}")
+    generator = SimpleQuestionnaireGenerator()
+    questions_by_category = generator.generate_questions(uploaded_document_types=uploaded_doc_types)
     
     return {
-        "message": f"Saved {saved_count} responses",
-        "saved_count": saved_count,
-        "errors": errors if errors else None
+        "questions_by_category": questions_by_category,
+        "total_questions": sum(len(q) for q in questions_by_category.values()),
+        "sections": {
+            "personal": "Personal Information (Required)",
+            "travel_itinerary": "Travel Itinerary (Skip if uploaded)",
+            "hotel_booking": "Hotel Booking (Skip if uploaded)",
+            "air_ticket": "Air Ticket (Skip if uploaded)",
+            "assets": "Financial & Assets",
+            "financial": "Employment & Income",
+            "home_ties": "Home Ties",
+            "other": "Other (Optional)"
+        }
     }
 
+@router.post("/response/{application_id}")
+async def save_responses(application_id: int, request: SaveQuestionnaireRequest, db: Session = Depends(get_db)):
+    saved_count = 0
+    for resp in request.responses:
+        q = db.query(QuestionnaireResponse).filter(
+            QuestionnaireResponse.application_id == application_id,
+            QuestionnaireResponse.question_key == resp.question_key
+        ).first()
+        
+        if q:
+            q.answer = resp.answer
+            q.answered_at = datetime.now()
+        else:
+            q = QuestionnaireResponse(
+                application_id=application_id,
+                question_key=resp.question_key,
+                question_text=resp.question_key.replace('_', ' ').title(),
+                answer=resp.answer,
+                category=QuestionCategory.PERSONAL,
+                data_type=QuestionDataType.TEXT,
+                is_required=False,
+                answered_at=datetime.now()
+            )
+            db.add(q)
+        saved_count += 1
+    
+    db.commit()
+    return {"message": f"Saved {saved_count} responses", "saved_count": saved_count}
+
+@router.post("/complete/{application_id}")
+async def mark_complete(application_id: int, db: Session = Depends(get_db)):
+    app = db.query(VisaApplication).filter(VisaApplication.id == application_id).first()
+    if app:
+        app.questionnaire_complete = True
+        db.commit()
+    return {"message": "Questionnaire complete"}
+
+@router.get("/status/{application_id}")
+async def get_status(application_id: int, db: Session = Depends(get_db)):
+    app = db.query(VisaApplication).filter(VisaApplication.id == application_id).first()
+    return {"questionnaire_complete": getattr(app, 'questionnaire_complete', False) if app else False}
 
 @router.get("/responses/{application_id}")
-async def get_responses(
-    application_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    Get all questionnaire responses grouped by category
-    """
-    responses = db.query(QuestionnaireResponse).filter(
-        QuestionnaireResponse.application_id == application_id
-    ).all()
+async def get_responses(application_id: int, db: Session = Depends(get_db)):
+    """Get questionnaire responses - returns empty dict if no responses yet"""
+    responses = db.query(QuestionnaireResponse).filter(QuestionnaireResponse.application_id == application_id).all()
     
+    # Return empty dict if no responses (not an error - just means questionnaire not filled yet)
     if not responses:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No questionnaire found"
-        )
+        return {}
     
-    # Group by category
     grouped = {}
-    for resp in responses:
-        category = resp.category.value
-        if category not in grouped:
-            grouped[category] = []
-        
-        grouped[category].append({
-            "key": resp.question_key,
-            "question": resp.question_text,
-            "answer": resp.answer,
-            "data_type": resp.data_type.value,
-            "is_required": resp.is_required,
-            "answered_at": resp.answered_at
-        })
-    
+    for r in responses:
+        cat = r.category.value
+        if cat not in grouped:
+            grouped[cat] = []
+        grouped[cat].append({"key": r.question_key, "question": r.question_text, "answer": r.answer})
     return grouped
 
-
-@router.get("/progress/{application_id}", response_model=QuestionnaireProgressResponse)
-async def get_progress(
-    application_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    Get questionnaire completion progress
-    """
-    all_questions = db.query(QuestionnaireResponse).filter(
-        QuestionnaireResponse.application_id == application_id
-    ).all()
-    
-    if not all_questions:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No questionnaire found"
-        )
-    
-    total = len(all_questions)
-    answered = sum(1 for q in all_questions if q.answer)
-    
-    # Get category status
-    categories = {}
-    for q in all_questions:
-        cat = q.category.value
-        if cat not in categories:
-            categories[cat] = {"total": 0, "answered": 0}
-        categories[cat]["total"] += 1
-        if q.answer:
-            categories[cat]["answered"] += 1
-    
-    completed_categories = [cat for cat, data in categories.items() if data["answered"] == data["total"]]
-    pending_categories = [cat for cat, data in categories.items() if data["answered"] < data["total"]]
-    
-    completion_percentage = int((answered / total) * 100) if total > 0 else 0
-    
-    return QuestionnaireProgressResponse(
-        total_questions=total,
-        answered_questions=answered,
-        completion_percentage=completion_percentage,
-        categories_completed=completed_categories,
-        categories_pending=pending_categories
-    )
-
-
-@router.get("/analysis-summary/{application_id}")
-async def get_analysis_summary(
-    application_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    Get analysis summary showing uploaded vs missing documents
-    Used by questionnaire wizard to show context
-    """
-    application = db.query(VisaApplication).filter(VisaApplication.id == application_id).first()
-    if not application:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Application not found"
-        )
-    
-    # Get uploaded documents
-    uploaded_docs = db.query(Document).filter(
-        Document.application_id == application_id,
-        Document.is_uploaded == True
-    ).all()
-    
-    uploaded_types = [doc.document_type.value for doc in uploaded_docs]
-    
-    # All document types
-    from app.models import DocumentType
-    all_types = [dt.value for dt in DocumentType]
-    
-    missing_types = [t for t in all_types if t not in uploaded_types]
-    
+@router.get("/progress/{application_id}")
+async def get_progress(application_id: int, db: Session = Depends(get_db)):
+    questions = db.query(QuestionnaireResponse).filter(QuestionnaireResponse.application_id == application_id).all()
+    total = len(questions)
+    answered = sum(1 for q in questions if q.answer)
     return {
-        "total_documents": 16,
-        "uploaded_count": len(uploaded_types),
-        "missing_count": len(missing_types),
-        "uploaded_types": uploaded_types,
-        "missing_types": missing_types
+        "total_questions": total,
+        "answered_questions": answered,
+        "completion_percentage": int((answered/total)*100) if total > 0 else 0
     }

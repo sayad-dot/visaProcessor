@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Business Card</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @page {
+            size: 3.5in 2in;
+            margin: 0;
+        }
+        
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            background: white;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .business-card {
+            width: 3.5in;
+            height: 2in;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+        
+        /* Left side - Dark teal section */
+        .left-section {
+            width: 40%;
+            background: linear-gradient(135deg, #0d3d56 0%, #0a4d5c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            clip-path: polygon(0 0, 85% 0, 100% 100%, 0% 100%);
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Stylized logo using CSS */
+        .logo-icon {
+            width: 50px;
+            height: 40px;
+            position: relative;
+        }
+        
+        .wave-line {
+            position: absolute;
+            height: 8px;
+            background: linear-gradient(90deg, #dc2626 0%, #991b1b 100%);
+            border-radius: 4px;
+        }
+        
+        .wave-1 {
+            width: 30px;
+            top: 5px;
+            left: 0;
+            transform: rotate(-10deg);
+        }
+        
+        .wave-2 {
+            width: 35px;
+            top: 16px;
+            left: 8px;
+            transform: rotate(-5deg);
+        }
+        
+        .wave-3 {
+            width: 28px;
+            top: 27px;
+            left: 15px;
+            transform: rotate(5deg);
+        }
+        
+        /* Right side - White section */
+        .right-section {
+            width: 60%;
+            background: #f8f8f8;
+            padding: 0.3in 0.25in 0.3in 0.4in;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        /* Orange header box */
+        .header-box {
+            position: absolute;
+            top: 0.25in;
+            right: 0;
+            background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+            padding: 8px 20px 8px 15px;
+            clip-path: polygon(10% 0, 100% 0, 100% 100%, 0% 100%);
+            min-width: 1.8in;
+        }
+        
+        .name {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin: 0;
+            letter-spacing: 0.5px;
+        }
+        
+        .designation {
+            font-size: 8pt;
+            color: #4a4a4a;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+        
+        .contact-info {
+            margin-top: 0.35in;
+            color: #4a4a4a;
+            font-size: 8pt;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .contact-icon {
+            width: 12px;
+            height: 12px;
+            margin-right: 8px;
+            border-radius: 50%;
+            background: #f59e0b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 7pt;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .contact-text {
+            font-size: 8pt;
+            color: #4a4a4a;
+            line-height: 1.2;
+        }
+    </style>
+</head>
+<body>
+    <div class="business-card">
+        <!-- Left Section with Logo -->
+        <div class="left-section">
+            <div class="logo">
+                <div class="logo-icon">
+                    <div class="wave-line wave-1"></div>
+                    <div class="wave-line wave-2"></div>
+                    <div class="wave-line wave-3"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Section with Info -->
+        <div class="right-section">
+            <div class="header-box">
+                <div class="name">{{ full_name }}</div>
+                <div class="designation">{{ designation }}</div>
+            </div>
+            
+            <div class="contact-info">
+                <div class="contact-item">
+                    <div class="contact-icon">📞</div>
+                    <div class="contact-text">{{ phone }}</div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">✉</div>
+                    <div class="contact-text">{{ email }}</div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">🌐</div>
+                    <div class="contact-text">{{ website }}</div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">📍</div>
+                    <div class="contact-text">{{ address }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

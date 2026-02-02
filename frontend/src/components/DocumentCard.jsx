@@ -60,14 +60,6 @@ const DocumentCard = ({
         bgColor: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
         borderColor: '#2196f3'
       };
-    } else if (requiredDocument?.can_be_generated) {
-      return {
-        icon: <AIIcon />,
-        color: 'default',
-        label: 'AI Generated',
-        bgColor: 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
-        borderColor: '#9c27b0'
-      };
     } else if (requiredDocument?.is_mandatory) {
       return {
         icon: <ErrorIcon />,
@@ -228,41 +220,40 @@ const DocumentCard = ({
               </IconButton>
             </Tooltip>
           </Box>
-        ) : requiredDocument?.can_be_generated ? (
-          <Chip
-            icon={<AIIcon sx={{ fontSize: 18 }} />}
-            label="AI Creates"
-            size="medium"
-            sx={{
-              backgroundColor: 'rgba(156, 39, 176, 0.15)',
-              color: '#7b1fa2',
-              fontWeight: 600
-            }}
-          />
         ) : (
-          <Button
-            variant="contained"
-            color={requiredDocument?.is_mandatory ? "error" : "primary"}
-            size="large"
-            startIcon={<CloudUploadIcon />}
-            onClick={() => onUpload && onUpload(documentType)}
-            disabled={uploading}
-            sx={{
-              minWidth: 140,
-              height: 48,
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              borderRadius: 2,
-              textTransform: 'none',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              '&:hover': {
-                boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-                transform: 'scale(1.02)'
-              }
-            }}
-          >
-            {uploading ? 'Uploading...' : 'Upload'}
-          </Button>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+            <Button
+              variant="contained"
+              color={requiredDocument?.is_mandatory ? "error" : "primary"}
+              size="large"
+              startIcon={<CloudUploadIcon />}
+              onClick={() => onUpload && onUpload(documentType)}
+              disabled={uploading}
+              sx={{
+                minWidth: 140,
+                height: 48,
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                borderRadius: 2,
+                textTransform: 'none',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                '&:hover': {
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                  transform: 'scale(1.02)'
+                }
+              }}
+            >
+              {uploading ? 'Uploading...' : 'Upload'}
+            </Button>
+            {requiredDocument?.can_be_generated && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <AIIcon sx={{ fontSize: 14, color: '#7b1fa2' }} />
+                <Typography variant="caption" sx={{ color: '#7b1fa2', fontWeight: 500 }}>
+                  or AI generates
+                </Typography>
+              </Box>
+            )}
+          </Box>
         )}
       </Box>
     </Card>

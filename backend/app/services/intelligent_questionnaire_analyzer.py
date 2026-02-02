@@ -309,36 +309,37 @@ class IntelligentQuestionnaireAnalyzer:
     ) -> Dict[str, List[FieldRequirement]]:
         """
         Group questions by logical categories for better UX
+        ALIGNED WITH FRONTEND: personal, employment, business, travel_purpose, financial, assets, home_ties
         """
         categories = {
-            "personal_identity": [],
-            "travel_details": [],
-            "business_employment": [],
+            "personal": [],
+            "employment": [],
+            "business": [],
+            "travel_purpose": [],
             "financial": [],
-            "assets_property": [],
-            "home_ties": [],
-            "verification": []
+            "assets": [],
+            "home_ties": []
         }
         
         for q in questions:
             # Determine category based on field key
-            if any(x in q.field_key for x in ['passport', 'nid', 'name', 'birth', 'identity']):
-                categories['personal_identity'].append(q)
-            elif any(x in q.field_key for x in ['travel', 'trip', 'visit', 'hotel', 'flight', 'itinerary']):
-                categories['travel_details'].append(q)
-            elif any(x in q.field_key for x in ['business', 'company', 'employment', 'designation', 'job']):
-                categories['business_employment'].append(q)
+            if any(x in q.field_key for x in ['passport', 'nid', 'name', 'birth', 'identity', 'history.visa']):
+                categories['personal'].append(q)
+            elif any(x in q.field_key for x in ['employment', 'designation', 'job', 'salary', 'employer']):
+                categories['employment'].append(q)
+            elif any(x in q.field_key for x in ['business', 'company', 'trade']):
+                categories['business'].append(q)
+            elif any(x in q.field_key for x in ['travel', 'trip', 'visit', 'hotel', 'flight', 'itinerary', 'ticket']):
+                categories['travel_purpose'].append(q)
             elif any(x in q.field_key for x in ['financial', 'income', 'bank', 'savings', 'tax']):
                 categories['financial'].append(q)
             elif any(x in q.field_key for x in ['assets', 'property', 'vehicle', 'investment']):
-                categories['assets_property'].append(q)
+                categories['assets'].append(q)
             elif any(x in q.field_key for x in ['home_ties', 'family', 'reasons_to_return']):
                 categories['home_ties'].append(q)
-            elif 'verify' in q.field_key:
-                categories['verification'].append(q)
             else:
                 # Default to personal
-                categories['personal_identity'].append(q)
+                categories['personal'].append(q)
         
         # Remove empty categories
         return {k: v for k, v in categories.items() if v}

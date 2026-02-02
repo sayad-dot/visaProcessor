@@ -33,7 +33,8 @@ import {
   Error as ErrorIcon,
   Star as StarIcon,
   CloudUpload as UploadIcon,
-  QuestionAnswer as QuestionIcon
+  QuestionAnswer as QuestionIcon,
+  AutoAwesome as AIIcon
 } from '@mui/icons-material';
 import { documentService } from '../services/apiService';
 
@@ -50,6 +51,7 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
   const [analysisResults, setAnalysisResults] = useState(null);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [worstDocuments, setWorstDocuments] = useState([]);
+  const [questionnaireComplete, setQuestionnaireComplete] = useState(false);
 
   // Rotating messages during analysis
   const analysisMessages = [
@@ -96,9 +98,10 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
         const data = await response.json();
         setAnalysisStatus(data);
 
-        // If completed, fetch results
+        // If completed, fetch results but DON'T auto-show popup
+        // Popup will only show when user clicks analyze/re-analyze
         if (data.status === 'completed') {
-          fetchAnalysisResults();
+          fetchAnalysisResults(false); // false = don't show popup
         }
         // If analyzing, start polling
         else if (data.status === 'analyzing' || data.status === 'started') {
@@ -165,7 +168,7 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
             setIsAnalyzing(false);
 
             if (data.status === 'completed') {
-              fetchAnalysisResults();
+              fetchAnalysisResults(true); // true = show popup
               if (onAnalysisComplete) {
                 onAnalysisComplete(data);
               }
@@ -182,12 +185,25 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
     setPolling(interval);
   };
 
-  const fetchAnalysisResults = async () => {
+  const fetchAnalysisResults = async (showPopup = true) => {
     try {
       const response = await fetch(`http://localhost:8000/api/analysis/results/${applicationId}`);
       if (response.ok) {
         const data = await response.json();
         setAnalysisResults(data);
+        
+        // Check if questionnaire is already complete
+        try {
+          const questionnaireResponse = await fetch(`http://localhost:8000/api/questionnaire/responses/${applicationId}`);
+          if (questionnaireResponse.ok) {
+            const questionnaireData = await questionnaireResponse.json();
+            if (questionnaireData && Object.keys(questionnaireData).length > 0) {
+              setQuestionnaireComplete(true);
+            }
+          }
+        } catch (error) {
+          console.log('No questionnaire responses yet');
+        }
         
         // Calculate worst performing documents
         if (data.extracted_data) {
@@ -207,8 +223,10 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
           setWorstDocuments(docScores.slice(0, worstCount).filter(d => d.confidence < 85));
         }
         
-        // Show result dialog
-        setShowResultDialog(true);
+        // Show result dialog only if requested
+        if (showPopup) {
+          setShowResultDialog(true);
+        }
       }
     } catch (err) {
       console.error('Error fetching results:', err);
@@ -534,28 +552,44 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
               >
                 Re-analyze
               </Button>
-              <Button
-                variant="contained"
-                startIcon={<QuestionIcon />}
-                onClick={() => {
-                  if (onOpenQuestionnaire) {
-                    onOpenQuestionnaire();
-                  } else if (onAnalysisComplete) {
-                    onAnalysisComplete(analysisResults);
-                  }
-                }}
-                size="large"
-                sx={{
-                  borderRadius: 2,
-                  px: 4,
-                  background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #5a6fd6 30%, #6a3f96 90%)',
-                  }
-                }}
-              >
-                Continue to Questionnaire
-              </Button>
+              {!questionnaireComplete ? (
+                <Button
+                  variant="contained"
+                  startIcon={<QuestionIcon />}
+                  onClick={() => {
+                    if (onOpenQuestionnaire) {
+                      onOpenQuestionnaire();
+                    } else if (onAnalysisComplete) {
+                      onAnalysisComplete(analysisResults);
+                    }
+                  }}
+                  size="large"
+                  sx={{
+                    borderRadius: 2,
+                    px: 4,
+                    background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #5a6fd6 30%, #6a3f96 90%)',
+                    }
+                  }}
+                >
+                  Continue to Questionnaire
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  startIcon={<CheckCircleIcon />}
+                  size="large"
+                  disabled
+                  sx={{
+                    borderRadius: 2,
+                    px: 4,
+                    background: 'linear-gradient(45deg, #4caf50 30%, #45a049 90%)',
+                  }}
+                >
+                  Questionnaire Completed ✓
+                </Button>
+              )}
             </Box>
 
             {/* Results Summary */}
@@ -657,9 +691,11 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
           )}
           
           <Typography variant="body1" sx={{ textAlign: 'center', color: 'text.secondary' }}>
-            {scoreInfo.level === 'poor' 
-              ? 'Re-upload your documents for better results before proceeding.'
-              : 'Now let\'s gather some additional information to generate your visa documents!'
+            {questionnaireComplete
+              ? '🎉 Perfect! Now generate the remaining documents using our system. Click the button below to proceed.'
+              : scoreInfo.level === 'poor' 
+                ? 'Re-upload your documents for better results before proceeding.'
+                : 'Now let\'s gather some additional information to generate your visa documents!'
             }
           </Typography>
         </DialogContent>
@@ -674,26 +710,163 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
               Re-upload Documents
             </Button>
           )}
-          <Button
-            variant="contained"
-            onClick={() => {
-              setShowResultDialog(false);
-              if (onOpenQuestionnaire) {
-                onOpenQuestionnaire();
-              } else if (onAnalysisComplete) {
-                onAnalysisComplete(analysisResults);
-              }
-            }}
-            size="large"
-            startIcon={<QuestionIcon />}
+          {!questionnaireComplete ? (
+            <Button
+              variant="contained"
+              onClick={() => {
+                setShowResultDialog(false);
+                if (onOpenQuestionnaire) {
+                  onOpenQuestionnaire();
+                } else if (onAnalysisComplete) {
+                  onAnalysisComplete(analysisResults);
+                }
+              }}
+              size="large"
+              startIcon={<QuestionIcon />}
+              sx={{
+                px: 4,
+                background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+              }}
+            >
+              Continue to Questionnaire
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={() => {
+                setShowResultDialog(false);
+                // Scroll to generation section
+                setTimeout(() => {
+                  const generationSection = document.querySelector('[data-section="generation"]');
+                  if (generationSection) {
+                    generationSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }, 300);
+              }}
+              size="large"
+              startIcon={<AIIcon />}
+              sx={{
+                px: 4,
+                background: 'linear-gradient(45deg, #4caf50 30%, #45a049 90%)',
+              }}
+            >
+              Generate Documents Now
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Analyzing Progress Dialog */}
+      <Dialog
+        open={isAnalyzing}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            overflow: 'hidden'
+          }
+        }}
+      >
+        {/* Animated Header */}
+        <Box
+          sx={{
+            p: 3,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            textAlign: 'center'
+          }}
+        >
+          <CircularProgress 
+            size={60} 
+            thickness={4}
+            sx={{ color: 'white', mb: 2 }}
+          />
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+            🔍 Analyzing Your Documents
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.9 }}>
+            AI is extracting information from your files
+          </Typography>
+        </Box>
+
+        <DialogContent sx={{ p: 3 }}>
+          {/* Progress Bar */}
+          <Box sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Analysis Progress
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                {analysisStatus?.progress || 0}%
+              </Typography>
+            </Box>
+            <LinearProgress 
+              variant="determinate" 
+              value={analysisStatus?.progress || 0}
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                bgcolor: '#e0e0e0',
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 4,
+                  background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)'
+                }
+              }}
+            />
+          </Box>
+
+          {/* Rotating Messages */}
+          <Box
             sx={{
-              px: 4,
-              background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+              p: 2,
+              bgcolor: '#f5f5f5',
+              borderRadius: 2,
+              textAlign: 'center',
+              minHeight: '60px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            Continue to Questionnaire
-          </Button>
-        </DialogActions>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontWeight: 500,
+                animation: 'fadeIn 0.5s ease-in-out'
+              }}
+            >
+              {analysisMessages[currentMessageIndex]}
+            </Typography>
+          </Box>
+
+          {/* Documents Status */}
+          {analysisStatus?.documents_analyzed !== undefined && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
+                Documents Processed: {analysisStatus.documents_analyzed} / {analysisStatus.total_documents || 0}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {[...Array(analysisStatus.total_documents || 0)].map((_, idx) => (
+                  <Chip
+                    key={idx}
+                    label={idx + 1}
+                    size="small"
+                    color={idx < analysisStatus.documents_analyzed ? 'success' : 'default'}
+                    icon={idx < analysisStatus.documents_analyzed ? <CheckCircleIcon /> : undefined}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Note */}
+          <Alert severity="info" sx={{ mt: 3 }}>
+            <Typography variant="body2">
+              This usually takes 30-60 seconds. Please don't close this window.
+            </Typography>
+          </Alert>
+        </DialogContent>
       </Dialog>
     </Card>
   );

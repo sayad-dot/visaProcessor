@@ -42,13 +42,32 @@ async def start_generation(
     if existing:
         return {"message": "Generation already in progress", "status": "generating"}
     
+    # Calculate how many documents need to be generated (DYNAMIC)
+    # All 13 AI-generatable document types
+    all_generatable_types = [
+        "cover_letter", "nid_english", "visiting_card", "financial_statement",
+        "travel_itinerary", "travel_history", "home_tie_statement", "asset_valuation",
+        "tin_certificate", "tax_certificate", "trade_license", "hotel_booking", "air_ticket"
+    ]
+    
+    # Check which ones are already uploaded
+    uploaded_docs = db.query(Document).filter(
+        Document.application_id == application_id
+    ).all()
+    uploaded_types = [doc.document_type.value for doc in uploaded_docs]
+    
+    # Calculate documents that need generation (not uploaded)
+    docs_to_generate = [doc for doc in all_generatable_types if doc not in uploaded_types]
+    total_to_generate = len(docs_to_generate)
+    
     # Initialize session tracking
     generation_sessions[application_id] = {
         "status": "started",
         "progress": 0,
         "current_document": None,
         "documents_completed": 0,
-        "total_documents": 8,
+        "total_documents": total_to_generate,
+        "docs_to_generate": docs_to_generate,
         "started_at": datetime.now().isoformat()
     }
     
@@ -58,7 +77,7 @@ async def start_generation(
     return {
         "message": "PDF generation started",
         "application_id": application_id,
-        "total_documents": 8,
+        "total_documents": total_to_generate,
         "status": "started"
     }
 
@@ -72,17 +91,29 @@ def generate_documents_task(application_id: int, db: Session):
         generation_sessions[application_id]["status"] = "generating"
         generation_sessions[application_id]["progress"] = 5
         
-        # Document generation order and progress weights
-        documents = [
-            ("cover_letter", "Cover Letter", 15),
-            ("nid_english", "NID Translation", 12),
-            ("visiting_card", "Visiting Card", 10),
-            ("financial_statement", "Financial Statement", 15),
-            ("travel_itinerary", "Travel Itinerary", 13),
-            ("travel_history", "Travel History", 10),
-            ("home_tie_statement", "Home Tie Statement", 12),
-            ("asset_valuation", "Asset Valuation", 13),
-        ]
+        # Get dynamic list of documents to generate from session
+        docs_to_generate = generation_sessions[application_id].get("docs_to_generate", [])
+        
+        # All possible documents with their display names and weights
+        all_documents = {
+            "cover_letter": ("Cover Letter", 8),
+            "nid_english": ("NID Translation", 7),
+            "visiting_card": ("Visiting Card", 6),
+            "financial_statement": ("Financial Statement", 8),
+            "travel_itinerary": ("Travel Itinerary", 9),
+            "travel_history": ("Travel History", 6),
+            "home_tie_statement": ("Home Tie Statement", 7),
+            "asset_valuation": ("Asset Valuation", 10),
+            "tin_certificate": ("TIN Certificate", 7),
+            "tax_certificate": ("Tax Certificate", 7),
+            "trade_license": ("Trade License", 7),
+            "hotel_booking": ("Hotel Booking", 9),
+            "air_ticket": ("Air Ticket", 9),
+        }
+        
+        # Filter to only generate documents that aren't uploaded
+        documents = [(doc_type, all_documents[doc_type][0], all_documents[doc_type][1]) 
+                     for doc_type in docs_to_generate if doc_type in all_documents]
         
         completed = 0
         total_progress = 5
@@ -109,6 +140,16 @@ def generate_documents_task(application_id: int, db: Session):
                     generator.generate_home_tie_statement()
                 elif doc_type == "asset_valuation":
                     generator.generate_asset_valuation()
+                elif doc_type == "tin_certificate":
+                    generator.generate_tin_certificate()
+                elif doc_type == "tax_certificate":
+                    generator.generate_tax_certificate()
+                elif doc_type == "trade_license":
+                    generator.generate_trade_license()
+                elif doc_type == "hotel_booking":
+                    generator.generate_hotel_booking()
+                elif doc_type == "air_ticket":
+                    generator.generate_air_ticket()
                 
                 completed += 1
                 total_progress += weight
@@ -169,22 +210,35 @@ async def get_generation_status(application_id: int, db: Session = Depends(get_d
         GeneratedDocument.application_id == application_id
     ).all()
     
+    # Calculate dynamic total based on uploaded documents
+    all_generatable_types = [
+        "cover_letter", "nid_english", "visiting_card", "financial_statement",
+        "travel_itinerary", "travel_history", "home_tie_statement", "asset_valuation",
+        "tin_certificate", "tax_certificate", "trade_license", "hotel_booking", "air_ticket"
+    ]
+    uploaded_docs = db.query(Document).filter(
+        Document.application_id == application_id
+    ).all()
+    uploaded_types = [doc.document_type.value for doc in uploaded_docs]
+    docs_to_generate = [doc for doc in all_generatable_types if doc not in uploaded_types]
+    total_documents = len(docs_to_generate)
+    
     if not docs:
         return {
             "status": "not_started",
             "progress": 0,
             "documents_completed": 0,
-            "total_documents": 8
+            "total_documents": total_documents
         }
     
     completed = sum(1 for d in docs if d.status == GenerationStatus.COMPLETED)
     generating = any(d.status == GenerationStatus.GENERATING for d in docs)
     
     return {
-        "status": "generating" if generating else ("completed" if completed == 8 else "partial"),
-        "progress": int((completed / 8) * 100),
+        "status": "generating" if generating else ("completed" if completed == total_documents else "partial"),
+        "progress": int((completed / total_documents) * 100) if total_documents > 0 else 100,
         "documents_completed": completed,
-        "total_documents": 8,
+        "total_documents": total_documents,
         "completed_documents": [
             {
                 "type": doc.document_type,
@@ -267,16 +321,18 @@ async def download_all_documents(application_id: int, db: Session = Depends(get_
     os.makedirs(os.path.dirname(zip_path), exist_ok=True)
     
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        # Add uploaded documents
+        # Add uploaded documents (all files in root folder)
         for doc in uploaded_docs:
             if os.path.exists(doc.file_path):
-                arcname = f"01_Uploaded/{doc.document_name}"
+                # Use only the filename, no folder prefix
+                arcname = doc.document_name
                 zipf.write(doc.file_path, arcname)
         
-        # Add generated documents
+        # Add generated documents (all files in root folder)
         for doc in generated_docs:
             if os.path.exists(doc.file_path):
-                arcname = f"02_Generated/{doc.file_name}"
+                # Use only the filename, no folder prefix
+                arcname = doc.file_name
                 zipf.write(doc.file_path, arcname)
     
     return FileResponse(

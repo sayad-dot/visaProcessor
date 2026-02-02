@@ -326,8 +326,10 @@ CRITICAL: Return ONLY JSON. No markdown, no code blocks.
 
 INSTRUCTIONS:
 1. Look for account holder name, account number, balance
-2. Amounts may be in various formats - extract the number
-3. Bank names: Common banks in BD include DBBL, City Bank, BRAC, etc.
+2. Extract father's name, mother's name, and current address (often included in Bangladesh bank certificates)
+3. Amounts may be in various formats - extract the number
+4. Bank names: Common banks in BD include DBBL, City Bank, BRAC, etc.
+5. Extract names in ENGLISH only (not Bangla script)
 
 BANK CERTIFICATE TEXT:
 {text}
@@ -336,6 +338,9 @@ Return ONLY valid JSON:
 
 {{
     "account_holder_name": "Account holder name",
+    "father_name": "Father's name in English if available",
+    "mother_name": "Mother's name in English if available",
+    "current_address": "Current address if available",
     "account_number": "Full account number",
     "bank_name": "Bank name",
     "branch_name": "Branch name",
@@ -350,6 +355,7 @@ Return ONLY valid JSON:
 }}
 
 AMOUNT RULES: Remove currency symbols (৳, BDT, Tk) and commas. Return pure number.
+NAME RULES: Extract English names only, not Bengali script.
 CRITICAL: Return ONLY JSON.
 """
         
