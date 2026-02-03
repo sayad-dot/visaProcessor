@@ -228,13 +228,13 @@ class QuestionnaireResponse(Base):
     application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
     
     # Question details
-    category = Column(Enum(QuestionCategory, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
+    category = Column(Enum(QuestionCategory, values_callable=lambda obj: [e.value for e in obj], name='question_category'), nullable=False)
     question_key = Column(String(200), nullable=False)  # Unique identifier like 'employment.job_title'
     question_text = Column(Text, nullable=False)  # Actual question displayed to user
     
     # Response
     answer = Column(Text)
-    data_type = Column(Enum(QuestionDataType, values_callable=lambda obj: [e.value for e in obj]), default=QuestionDataType.TEXT)
+    data_type = Column(Enum(QuestionDataType, values_callable=lambda obj: [e.value for e in obj], name='question_data_type'), default=QuestionDataType.TEXT)
     
     # Options for select/multiselect questions
     options = Column(JSON)  # List of options if applicable
