@@ -12,12 +12,12 @@ from app.database import Base
 
 class ApplicationStatus(str, enum.Enum):
     """Application processing status"""
-    DRAFT = "draft"
-    DOCUMENTS_UPLOADED = "documents_uploaded"
-    ANALYZING = "analyzing"
-    GENERATING = "generating"
-    COMPLETED = "completed"
-    FAILED = "failed"
+    DRAFT = "DRAFT"
+    DOCUMENTS_UPLOADED = "DOCUMENTS_UPLOADED"
+    ANALYZING = "ANALYZING"
+    GENERATING = "GENERATING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 
 class DocumentType(str, enum.Enum):
