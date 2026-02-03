@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -93,7 +94,7 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(``http://localhost:8000/api`/questionnaire/generate/${applicationId}`);
+      const response = await fetch(`${API_BASE_URL}/questionnaire/generate/${applicationId}`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Failed to load questionnaire');
@@ -110,7 +111,7 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
 
   const loadAnalysisSummary = async () => {
     try {
-      const response = await fetch(``http://localhost:8000/api`/questionnaire/analysis-summary/${applicationId}`);
+      const response = await fetch(`${API_BASE_URL}/questionnaire/analysis-summary/${applicationId}`);
       if (response.ok) {
         const data = await response.json();
         setAnalysisSummary(data);
@@ -122,7 +123,7 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
 
   const loadExistingAnswers = async () => {
     try {
-      const response = await fetch(``http://localhost:8000/api`/questionnaire/responses/${applicationId}`);
+      const response = await fetch(`${API_BASE_URL}/questionnaire/responses/${applicationId}`);
       if (response.ok) {
         const data = await response.json();
         
@@ -146,7 +147,7 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
 
   const loadProgress = async () => {
     try {
-      const response = await fetch(``http://localhost:8000/api`/questionnaire/progress/${applicationId}`);
+      const response = await fetch(`${API_BASE_URL}/questionnaire/progress/${applicationId}`);
       if (response.ok) {
         const data = await response.json();
         setProgress(data);
@@ -182,7 +183,7 @@ const QuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
         }));
 
       if (responses.length > 0) {
-        const response = await fetch(``http://localhost:8000/api`/questionnaire/response/${applicationId}`, {
+        const response = await fetch(`${API_BASE_URL}/questionnaire/response/${applicationId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

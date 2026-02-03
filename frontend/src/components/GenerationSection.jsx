@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -29,8 +30,6 @@ import {
   Download
 } from '@mui/icons-material';
 import axios from 'axios';
-
-const API_BASE_URL = '`http://localhost:8000/api`';
 
 /**
  * GenerationSection Component - Enhanced

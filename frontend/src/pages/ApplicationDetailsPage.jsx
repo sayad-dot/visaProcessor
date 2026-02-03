@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config';
 import React, { useState, useEffect } from 'react'
 import {
   Container,
@@ -62,7 +63,7 @@ const ApplicationDetailsPage = () => {
       
       // Check if analysis is complete
       try {
-        const analysisResponse = await fetch(``http://localhost:8000/api`/analysis/status/${id}`)
+        const analysisResponse = await fetch(`${API_BASE_URL}/analysis/status/${id}`)
         if (analysisResponse.ok) {
           const analysisData = await analysisResponse.json()
           if (analysisData.status === 'completed') {
@@ -75,7 +76,7 @@ const ApplicationDetailsPage = () => {
       
       // Check if questionnaire is complete
       try {
-        const questionnaireResponse = await fetch(``http://localhost:8000/api`/questionnaire/responses/${id}`)
+        const questionnaireResponse = await fetch(`${API_BASE_URL}/questionnaire/responses/${id}`)
         if (questionnaireResponse.ok) {
           const questionnaireData = await questionnaireResponse.json()
           // If there are responses, consider questionnaire complete
@@ -138,7 +139,8 @@ const ApplicationDetailsPage = () => {
 
   const handleViewDocument = (document) => {
     // Open document in new tab
-    window.open(`http://localhost:8000${document.file_path}`, '_blank')
+    const apiRoot = API_BASE_URL.replace('/api', '');
+    window.open(`${apiRoot}${document.file_path}`, '_blank')
   }
 
   const handleProcessDocuments = async () => {
