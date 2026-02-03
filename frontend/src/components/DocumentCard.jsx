@@ -60,13 +60,23 @@ const DocumentCard = ({
         bgColor: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
         borderColor: '#2196f3'
       };
-    } else if (requiredDocument?.is_mandatory) {
+    } else if (requiredDocument?.is_mandatory && !requiredDocument?.can_be_generated) {
+      // Only 3 docs are truly required: passport, nid, bank statement
       return {
         icon: <ErrorIcon />,
         color: 'error',
         label: 'Required',
         bgColor: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
         borderColor: '#f44336'
+      };
+    } else if (requiredDocument?.can_be_generated) {
+      // AI-generated documents (Cover Letter, NID English, etc.)
+      return {
+        icon: <AIIcon />,
+        color: 'info',
+        label: 'Optional',
+        bgColor: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
+        borderColor: '#ff9800'
       };
     } else {
       return {
