@@ -1,0 +1,45 @@
+# Render Blueprint - Deploy Visa Processing Backend
+# This file ensures Render uses the CORRECT configuration
+
+services:
+  # Backend API Service
+  - type: web
+    name: visa-backend
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_gTl49fAVCaYI@ep-aged-dawn-ah5in31p-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - key: DB_USER
+        value: neondb_owner
+      - key: DB_PASSWORD
+        value: npg_gTl49fAVCaYI
+      - key: DB_HOST
+        value: ep-aged-dawn-ah5in31p-pooler.c-3.us-east-1.aws.neon.tech
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        value: neondb
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: CORS_ORIGINS
+        value: https://visa-processor.vercel.app,http://localhost:5173
+      - key: MAX_FILE_SIZE
+        value: "10485760"
+      - key: UPLOAD_FOLDER
+        value: "/tmp/uploads"
+      - key: GENERATED_FOLDER
+        value: "/tmp/generated"
+      - key: LOG_LEVEL
+        value: "INFO"
+      - key: LOG_FILE
+        value: "/tmp/logs/app.log"
