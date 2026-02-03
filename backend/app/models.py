@@ -68,7 +68,7 @@ class VisaApplication(Base):
     visa_type = Column(String(100), nullable=False, default="Tourist")
     
     # Application status
-    status = Column(Enum(ApplicationStatus), default=ApplicationStatus.DRAFT)
+    status = Column(Enum(ApplicationStatus, values_callable=lambda obj: [e.value for e in obj]), default=ApplicationStatus.DRAFT)
     
     # Extracted information (JSON field for flexibility)
     extracted_data = Column(JSON, default={})
@@ -228,13 +228,13 @@ class QuestionnaireResponse(Base):
     application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
     
     # Question details
-    category = Column(Enum(QuestionCategory), nullable=False)
+    category = Column(Enum(QuestionCategory, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     question_key = Column(String(200), nullable=False)  # Unique identifier like 'employment.job_title'
     question_text = Column(Text, nullable=False)  # Actual question displayed to user
     
     # Response
     answer = Column(Text)
-    data_type = Column(Enum(QuestionDataType), default=QuestionDataType.TEXT)
+    data_type = Column(Enum(QuestionDataType, values_callable=lambda obj: [e.value for e in obj]), default=QuestionDataType.TEXT)
     
     # Options for select/multiselect questions
     options = Column(JSON)  # List of options if applicable
@@ -269,7 +269,7 @@ class AnalysisSession(Base):
     application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
     
     # Analysis status
-    status = Column(Enum(AnalysisStatus), default=AnalysisStatus.PENDING)
+    status = Column(Enum(AnalysisStatus, values_callable=lambda obj: [e.value for e in obj]), default=AnalysisStatus.PENDING)
     documents_analyzed = Column(Integer, default=0)
     total_documents = Column(Integer, default=0)
     current_document = Column(String(200))  # Currently analyzing document
@@ -315,7 +315,7 @@ class GeneratedDocument(Base):
     file_size = Column(Integer)  # in bytes
     
     # Generation status
-    status = Column(Enum(GenerationStatus), default=GenerationStatus.PENDING, index=True)
+    status = Column(Enum(GenerationStatus, values_callable=lambda obj: [e.value for e in obj]), default=GenerationStatus.PENDING, index=True)
     generation_progress = Column(Integer, default=0)  # 0-100 percentage
     error_message = Column(Text)
     
