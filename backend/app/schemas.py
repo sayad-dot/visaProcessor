@@ -19,12 +19,12 @@ class Country(str, Enum):
 
 class ApplicationStatus(str, Enum):
     """Application status"""
-    DRAFT = "draft"
-    DOCUMENTS_UPLOADED = "documents_uploaded"
-    ANALYZING = "analyzing"
-    GENERATING = "generating"
-    COMPLETED = "completed"
-    FAILED = "failed"
+    DRAFT = "DRAFT"
+    DOCUMENTS_UPLOADED = "DOCUMENTS_UPLOADED"
+    ANALYZING = "ANALYZING"
+    GENERATING = "GENERATING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 
 class DocumentTypeEnum(str, Enum):
