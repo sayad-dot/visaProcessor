@@ -37,6 +37,7 @@ import {
   AutoAwesome as AIIcon
 } from '@mui/icons-material';
 import { documentService } from '../services/apiService';
+import { API_BASE_URL } from '../services/api';
 
 /**
  * AnalysisSection Component - Redesigned
@@ -93,7 +94,7 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
 
   const checkExistingAnalysis = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/analysis/status/${applicationId}`);
+      const response = await fetch(``http://localhost:8000/api`/analysis/status/${applicationId}`);
       if (response.ok) {
         const data = await response.json();
         setAnalysisStatus(data);
@@ -127,7 +128,7 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
       setError(null);
       setIsAnalyzing(true);
 
-      const response = await fetch(`http://localhost:8000/api/analysis/start/${applicationId}`, {
+      const response = await fetch(``http://localhost:8000/api`/analysis/start/${applicationId}`, {
         method: 'POST'
       });
 
@@ -156,7 +157,7 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
     // Poll every 2 seconds
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/analysis/status/${applicationId}`);
+        const response = await fetch(``http://localhost:8000/api`/analysis/status/${applicationId}`);
         if (response.ok) {
           const data = await response.json();
           setAnalysisStatus(data);
@@ -187,14 +188,14 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
 
   const fetchAnalysisResults = async (showPopup = true) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/analysis/results/${applicationId}`);
+      const response = await fetch(``http://localhost:8000/api`/analysis/results/${applicationId}`);
       if (response.ok) {
         const data = await response.json();
         setAnalysisResults(data);
         
         // Check if questionnaire is already complete
         try {
-          const questionnaireResponse = await fetch(`http://localhost:8000/api/questionnaire/responses/${applicationId}`);
+          const questionnaireResponse = await fetch(``http://localhost:8000/api`/questionnaire/responses/${applicationId}`);
           if (questionnaireResponse.ok) {
             const questionnaireData = await questionnaireResponse.json();
             if (questionnaireData && Object.keys(questionnaireData).length > 0) {
