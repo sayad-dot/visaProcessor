@@ -97,7 +97,7 @@ class Document(Base):
     application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
     
     # Document details
-    document_type = Column(Enum(DocumentType), nullable=False)
+    document_type = Column(Enum(DocumentType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     document_name = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     file_size = Column(Integer)  # in bytes
@@ -157,7 +157,7 @@ class RequiredDocument(Base):
     id = Column(Integer, primary_key=True, index=True)
     country = Column(String(100), nullable=False)
     visa_type = Column(String(100), nullable=False)
-    document_type = Column(Enum(DocumentType), nullable=False)
+    document_type = Column(Enum(DocumentType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     
     # Document metadata
     is_mandatory = Column(Boolean, default=True)
@@ -178,7 +178,7 @@ class ExtractedData(Base):
     id = Column(Integer, primary_key=True, index=True)
     application_id = Column(Integer, ForeignKey("visa_applications.id"), nullable=False)
     document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
-    document_type = Column(Enum(DocumentType), nullable=False)
+    document_type = Column(Enum(DocumentType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     
     # Structured extracted information (JSON for flexibility)
     data = Column(JSON, default={})
