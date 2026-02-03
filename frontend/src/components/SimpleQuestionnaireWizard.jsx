@@ -89,7 +89,7 @@ const SimpleQuestionnaireWizard = ({ open, onClose, applicationId, onComplete })
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`http://localhost:8000/api/questionnaire/generate/${applicationId}`);
+      const response = await fetch(``http://localhost:8000/api`/questionnaire/generate/${applicationId}`);
       if (!response.ok) {
         throw new Error('Failed to load questionnaire');
       }
@@ -106,7 +106,7 @@ const SimpleQuestionnaireWizard = ({ open, onClose, applicationId, onComplete })
 
   const loadExistingAnswers = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/questionnaire/responses/${applicationId}`);
+      const response = await fetch(``http://localhost:8000/api`/questionnaire/responses/${applicationId}`);
       if (response.ok) {
         const data = await response.json();
         
@@ -171,7 +171,7 @@ const SimpleQuestionnaireWizard = ({ open, onClose, applicationId, onComplete })
         answer: value
       }));
 
-      const response = await fetch(`http://localhost:8000/api/questionnaire/response/${applicationId}`, {
+      const response = await fetch(``http://localhost:8000/api`/questionnaire/response/${applicationId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ responses })
@@ -182,7 +182,7 @@ const SimpleQuestionnaireWizard = ({ open, onClose, applicationId, onComplete })
       }
 
       // Mark questionnaire as complete
-      await fetch(`http://localhost:8000/api/questionnaire/complete/${applicationId}`, {
+      await fetch(``http://localhost:8000/api`/questionnaire/complete/${applicationId}`, {
         method: 'POST'
       });
 

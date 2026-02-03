@@ -62,7 +62,7 @@ const ApplicationDetailsPage = () => {
       
       // Check if analysis is complete
       try {
-        const analysisResponse = await fetch(`http://localhost:8000/api/analysis/status/${id}`)
+        const analysisResponse = await fetch(``http://localhost:8000/api`/analysis/status/${id}`)
         if (analysisResponse.ok) {
           const analysisData = await analysisResponse.json()
           if (analysisData.status === 'completed') {
@@ -75,7 +75,7 @@ const ApplicationDetailsPage = () => {
       
       // Check if questionnaire is complete
       try {
-        const questionnaireResponse = await fetch(`http://localhost:8000/api/questionnaire/responses/${id}`)
+        const questionnaireResponse = await fetch(``http://localhost:8000/api`/questionnaire/responses/${id}`)
         if (questionnaireResponse.ok) {
           const questionnaireData = await questionnaireResponse.json()
           // If there are responses, consider questionnaire complete
