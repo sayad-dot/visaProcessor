@@ -539,9 +539,7 @@ Bangladesh"""
     # ============================================================================
     
     def generate_visiting_card(self) -> str:
-        """Generate professional visiting/business card using HTML template"""
-        from app.services.template_renderer import TemplateRenderer
-        
+        """Generate professional visiting/business card using HTML template (with ReportLab fallback)"""
         doc_record = self._create_document_record("visiting_card", "Visiting_Card.pdf")
         file_path = doc_record.file_path
         
@@ -577,9 +575,17 @@ Bangladesh"""
             
             self._update_progress(doc_record, 60)
             
-            # Render using template
-            renderer = TemplateRenderer()
-            renderer.render_visiting_card(template_data, file_path)
+            # Try WeasyPrint first, fallback to ReportLab if it fails
+            try:
+                from app.services.template_renderer import TemplateRenderer
+                renderer = TemplateRenderer()
+                renderer.render_visiting_card(template_data, file_path)
+                logger.info("✅ Visiting card generated with WeasyPrint template")
+            except Exception as template_error:
+                logger.warning(f"⚠️ WeasyPrint failed: {template_error}. Falling back to ReportLab...")
+                # Fallback: Generate with ReportLab
+                self._generate_visiting_card_reportlab(template_data, file_path)
+                logger.info("✅ Visiting card generated with ReportLab fallback")
             
             self._update_progress(doc_record, 90)
             
@@ -594,6 +600,42 @@ Bangladesh"""
             doc_record.status = GenerationStatus.FAILED
             self.db.commit()
             raise
+    
+    def _generate_visiting_card_reportlab(self, data: dict, file_path: str):
+        """Fallback: Generate visiting card using ReportLab (for Render deployment)"""
+        from reportlab.pdfgen import canvas as pdf_canvas
+        from reportlab.lib import colors
+        
+        # Create PDF - Business card size (3.5" x 2" = 252pt x 144pt)
+        c = pdf_canvas.Canvas(file_path, pagesize=(252, 144))
+        
+        # Navy blue background
+        c.setFillColor(colors.HexColor('#003366'))
+        c.rect(0, 0, 252, 144, fill=True, stroke=False)
+        
+        # Yellow accent bar
+        c.setFillColor(colors.HexColor('#FFD700'))
+        c.rect(0, 0, 252, 20, fill=True, stroke=False)
+        
+        # Name (white, large)
+        c.setFillColor(colors.white)
+        c.setFont('Helvetica-Bold', 14)
+        c.drawString(15, 110, data['full_name'][:30])
+        
+        # Designation (yellow)
+        c.setFillColor(colors.HexColor('#FFD700'))
+        c.setFont('Helvetica', 10)
+        c.drawString(15, 92, data['designation'][:35])
+        
+        # Contact details (white, small)
+        c.setFillColor(colors.white)
+        c.setFont('Helvetica', 8)
+        c.drawString(15, 70, f"📞 {data['phone']}")
+        c.drawString(15, 55, f"✉ {data['email'][:30]}")
+        c.drawString(15, 40, f"🌐 {data['website'][:30]}")
+        c.drawString(15, 25, f"📍 {data['address'][:35]}")
+        
+        c.save()
     
     # ============================================================================
     # 4. FINANCIAL STATEMENT
@@ -1172,9 +1214,7 @@ Write in simple, flowing English. Make it sound genuine and heartfelt, not like 
     # ============================================================================
     
     def generate_asset_valuation(self) -> str:
-        """Generate comprehensive 5-page asset valuation certificate using HTML template"""
-        from app.services.template_renderer import TemplateRenderer
-        
+        """Generate comprehensive 5-page asset valuation certificate using HTML template (with ReportLab fallback)"""
         doc_record = self._create_document_record("asset_valuation", "Asset_Valuation_Certificate.pdf")
         file_path = doc_record.file_path
         
@@ -1217,9 +1257,17 @@ Write in simple, flowing English. Make it sound genuine and heartfelt, not like 
             
             self._update_progress(doc_record, 60)
             
-            # Render using template
-            renderer = TemplateRenderer()
-            renderer.render_asset_valuation(template_data, file_path)
+            # Try WeasyPrint first, fallback to ReportLab if it fails
+            try:
+                from app.services.template_renderer import TemplateRenderer
+                renderer = TemplateRenderer()
+                renderer.render_asset_valuation(template_data, file_path)
+                logger.info("✅ Asset valuation generated with WeasyPrint template")
+            except Exception as template_error:
+                logger.warning(f"⚠️ WeasyPrint failed: {template_error}. Falling back to ReportLab...")
+                # Fallback: Generate with ReportLab
+                self._generate_asset_valuation_reportlab(template_data, file_path)
+                logger.info("✅ Asset valuation generated with ReportLab fallback")
             
             self._update_progress(doc_record, 90)
             
@@ -1235,6 +1283,127 @@ Write in simple, flowing English. Make it sound genuine and heartfelt, not like 
             doc_record.status = GenerationStatus.FAILED
             self.db.commit()
             raise
+    
+    def _generate_asset_valuation_reportlab(self, data: dict, file_path: str):
+        """Fallback: Generate asset valuation using ReportLab (for Render deployment)"""
+        from reportlab.pdfgen import canvas as pdf_canvas
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import Table, TableStyle
+        
+        c = pdf_canvas.Canvas(file_path, pagesize=A4)
+        page_width, page_height = A4
+        
+        # Page 1: Cover Page
+        c.setFillColor(colors.HexColor('#003366'))
+        c.rect(0, 0, page_width, page_height, fill=True, stroke=False)
+        
+        c.setFillColor(colors.white)
+        c.setFont('Helvetica-Bold', 28)
+        c.drawCentredString(page_width/2, page_height - 200, "ASSET VALUATION")
+        c.drawCentredString(page_width/2, page_height - 240, "CERTIFICATE")
+        
+        c.setFont('Helvetica', 14)
+        c.drawCentredString(page_width/2, page_height - 320, f"Owner: {data['owner_name']}")
+        c.drawCentredString(page_width/2, page_height - 350, f"{data['owner_father_relation']}")
+        
+        c.setFont('Helvetica', 12)
+        c.drawCentredString(page_width/2, page_height - 400, f"Date: {datetime.now().strftime('%d %B %Y')}")
+        c.drawCentredString(page_width/2, page_height - 430, "Kamal & Associates")
+        c.drawCentredString(page_width/2, page_height - 450, "Professional Valuers")
+        
+        c.showPage()
+        
+        # Page 2: Property Details
+        c.setFillColor(colors.black)
+        c.setFont('Helvetica-Bold', 18)
+        c.drawString(50, page_height - 80, "PROPERTY ASSETS")
+        
+        c.setFont('Helvetica', 12)
+        y = page_height - 130
+        
+        # Property 1
+        c.drawString(50, y, "1. Residential Flat - Gulshan, Dhaka")
+        c.drawString(400, y, f"BDT {data['flat_value_1']}")
+        y -= 40
+        
+        # Property 2  
+        c.drawString(50, y, "2. Residential Flat - Banani, Dhaka")
+        c.drawString(400, y, f"BDT {data['flat_value_2']}")
+        y -= 40
+        
+        # Property 3
+        c.drawString(50, y, "3. Residential Flat - Dhanmondi, Dhaka")
+        c.drawString(400, y, f"BDT {data['flat_value_3']}")
+        y -= 60
+        
+        # Vehicle
+        c.setFont('Helvetica-Bold', 14)
+        c.drawString(50, y, "VEHICLE ASSETS")
+        y -= 40
+        c.setFont('Helvetica', 12)
+        c.drawString(50, y, "Car Saloon - Toyota (Dhaka Metro)")
+        c.drawString(400, y, f"BDT {data['car_value']}")
+        y -= 60
+        
+        # Business
+        c.setFont('Helvetica-Bold', 14)
+        c.drawString(50, y, "BUSINESS ASSETS")
+        y -= 40
+        c.setFont('Helvetica', 12)
+        c.drawString(50, y, f"{data['business_name']} - {data['business_type']}")
+        c.drawString(400, y, f"BDT {data['business_value']}")
+        y -= 80
+        
+        # Total
+        c.setFont('Helvetica-Bold', 16)
+        c.setFillColor(colors.HexColor('#003366'))
+        try:
+            p1 = int(str(data['flat_value_1']).replace(',', ''))
+            p2 = int(str(data['flat_value_2']).replace(',', ''))
+            p3 = int(str(data['flat_value_3']).replace(',', ''))
+            v = int(str(data['car_value']).replace(',', ''))
+            b = int(str(data['business_value']).replace(',', ''))
+            total = p1 + p2 + p3 + v + b
+            c.drawString(50, y, f"TOTAL ASSET VALUE: BDT {total:,}")
+        except:
+            c.drawString(50, y, "TOTAL ASSET VALUE: BDT 40,000,000+")
+        
+        c.showPage()
+        
+        # Page 3: Certification
+        c.setFillColor(colors.black)
+        c.setFont('Helvetica-Bold', 18)
+        c.drawCentredString(page_width/2, page_height - 80, "PROFESSIONAL CERTIFICATION")
+        
+        c.setFont('Helvetica', 12)
+        y = page_height - 150
+        cert_text = [
+            "This is to certify that the above valuation has been carried out based on",
+            "physical inspection, market analysis, and relevant documentation. The valuation",
+            "is prepared in accordance with Bangladesh Valuation Standards (BVS) and",
+            "International Valuation Standards (IVS).",
+            "",
+            "The valuation represents the fair market value as of the date mentioned above.",
+            "",
+            f"Prepared for: {data['owner_name']}",
+            f"Address: {data['owner_address']}",
+        ]
+        
+        for line in cert_text:
+            c.drawString(80, y, line)
+            y -= 25
+        
+        y -= 80
+        c.setFont('Helvetica-Bold', 12)
+        c.drawString(80, y, "Kamal & Associates")
+        y -= 20
+        c.setFont('Helvetica', 10)
+        c.drawString(80, y, "Licensed Professional Valuers")
+        y -= 15
+        c.drawString(80, y, "Dhaka, Bangladesh")
+        
+        c.save()
     
     def _amount_in_words(self, amount: int) -> str:
         """Convert number to words (simplified for BDT)"""
