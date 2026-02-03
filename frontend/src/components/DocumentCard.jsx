@@ -21,8 +21,9 @@ import {
 } from '@mui/icons-material';
 
 /**
- * DocumentCard Component - Redesigned
+ * DocumentCard Component - Redesigned v2
  * Displays individual document with prominent upload button
+ * Only shows red Required badge for passport, NID Bangla, and bank solvency
  */
 const DocumentCard = ({
   documentType,
