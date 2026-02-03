@@ -114,8 +114,11 @@ const AnalysisSection = ({ applicationId, onAnalysisComplete, onOpenQuestionnair
         if (errorData.detail && errorData.detail.includes('Application not found')) {
           setError('Application not found. Please check the application ID.');
           console.error('Application not found:', applicationId);
+        } else {
+          // No analysis exists yet - reset to clean state
+          setAnalysisStatus(null);
+          setAnalysisResults(null);
         }
-        // Otherwise, silently handle - no analysis exists yet (this is normal)
       }
     } catch (err) {
       // Network error or other issues - silently handle
