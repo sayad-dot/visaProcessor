@@ -234,7 +234,7 @@ const DocumentCard = ({
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
             <Button
               variant="contained"
-              color={requiredDocument?.is_mandatory ? "error" : "primary"}
+              color={(requiredDocument?.is_mandatory && !requiredDocument?.can_be_generated) ? "error" : "primary"}
               size="large"
               startIcon={<CloudUploadIcon />}
               onClick={() => onUpload && onUpload(documentType)}
