@@ -19,7 +19,7 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                 "type": "text",
                 "required": True,
                 "level": "required",
-                "placeholder": "MD OSMAN GONI",
+                "placeholder": "John Michael Doe",
                 "validation": {"min_length": 2, "max_length": 100},
                 "hint": "Must match your passport"
             },
@@ -29,16 +29,16 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                 "type": "email",
                 "required": True,
                 "level": "required",
-                "placeholder": "osman.goni@email.com",
+                "placeholder": "john.doe@example.com",
                 "validation": {"pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"}
             },
             {
                 "key": "phone",
                 "label": "Phone Number (with country code)",
                 "type": "tel",
-                "required": True,
-                "level": "required",
-                "placeholder": "+880-1712345678",
+                "required": False,
+                "level": "suggested",
+                "placeholder": "+1-555-0123",
                 "validation": {"pattern": "^\\+?[0-9]{10,15}$"}
             },
             {
@@ -55,7 +55,7 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                 "type": "text",
                 "required": True,
                 "level": "required",
-                "placeholder": "Abdul Rahman"
+                "placeholder": "Robert Smith"
             },
             {
                 "key": "mother_name",
@@ -63,7 +63,7 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                 "type": "text",
                 "required": True,
                 "level": "required",
-                "placeholder": "Fatima Begum"
+                "placeholder": "Mary Johnson"
             },
             {
                 "key": "permanent_address",
@@ -71,7 +71,7 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                 "type": "textarea",
                 "required": True,
                 "level": "required",
-                "placeholder": "House# 25, Road# 7, Bashundhara R/A, Dhaka",
+                "placeholder": "123 Main Street, Apt 4B, City, State, ZIP",
                 "rows": 3
             },
             {
@@ -116,7 +116,7 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                 "type": "text",
                 "required": False,
                 "level": "suggested",
-                "placeholder": "Mrs. Rashida Begum",
+                "placeholder": "Jane Doe",
                 "show_if": {"is_married": "Yes"}
             },
             {
@@ -271,24 +271,29 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                         "key": "country",
                         "label": "Country Name",
                         "type": "text",
-                        "placeholder": "Malaysia"
+                        "placeholder": "Thailand"
                     },
                     {
-                        "key": "year",
-                        "label": "Year",
-                        "type": "number",
-                        "placeholder": "2023",
-                        "validation": {"min": 1990, "max": 2026}
+                        "key": "visa_type",
+                        "label": "Visa Type",
+                        "type": "select",
+                        "options": ["Tourism", "Business", "Student", "Work", "Transit", "Other"],
+                        "placeholder": "Tourism"
                     },
                     {
-                        "key": "duration_days",
-                        "label": "Days Stayed",
-                        "type": "number",
-                        "placeholder": "13",
-                        "validation": {"min": 1, "max": 365}
+                        "key": "from_date",
+                        "label": "From Date",
+                        "type": "date",
+                        "placeholder": "2023-06-01"
+                    },
+                    {
+                        "key": "to_date",
+                        "label": "To Date",
+                        "type": "date",
+                        "placeholder": "2023-06-15"
                     }
                 ],
-                "hint": "Click 'Add Country' to add more entries"
+                "hint": "Click 'Add Country' to add more travel entries"
             },
             {
                 "key": "duration_days",
@@ -366,7 +371,7 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                 "type": "text",
                 "required": False,
                 "level": "optional",
-                "placeholder": "Reykjavik, Iceland",
+                "placeholder": "Downtown Reykjavik, Iceland",
                 "show_if": {"has_hotel_booking": "Yes"}
             },
             {
@@ -377,6 +382,25 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                 "level": "optional",
                 "options": ["Standard Single", "Standard Double", "Deluxe Room", "Suite", "Other"],
                 "show_if": {"has_hotel_booking": "Yes"}
+            },
+            {
+                "key": "hotel_preference_name",
+                "label": "Do you have any particular hotel in mind?",
+                "type": "text",
+                "required": False,
+                "level": "optional",
+                "placeholder": "Hotel Iceland or any preferred hotel name",
+                "show_if": {"has_hotel_booking": "No"},
+                "hint": "Otherwise our system will suggest one for you"
+            },
+            {
+                "key": "hotel_preference_location",
+                "label": "Preferred Hotel Location/Area",
+                "type": "text",
+                "required": False,
+                "level": "optional",
+                "placeholder": "Downtown Reykjavik, Near airport, etc.",
+                "show_if": {"has_hotel_booking": "No"}
             },
             {
                 "key": "has_travel_plan",
@@ -536,42 +560,43 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                         "key": "asset_type",
                         "label": "Asset Type",
                         "type": "select",
-                        "options": ["Land", "Building/House", "Apartment", "Vehicle", "Business", "Investment", "Other"]
+                        "options": ["Land", "Building", "House", "Vehicle"]
                     },
                     {
                         "key": "location",
                         "label": "Location/Address",
                         "type": "text",
-                        "placeholder": "Bashundhara R/A, Dhaka",
-                        "show_if_asset": ["Land", "Building/House", "Apartment"]
+                        "placeholder": "123 Street Name, City",
+                        "show_if_asset": ["Land", "Building", "House"]
                     },
                     {
-                        "key": "size",
-                        "label": "Size/Area",
-                        "type": "text",
-                        "placeholder": "5.5 Katha or 15,000 sq ft",
-                        "show_if_asset": ["Land", "Building/House", "Apartment"]
+                        "key": "area",
+                        "label": "Area (sq ft)",
+                        "type": "number",
+                        "placeholder": "15000",
+                        "validation": {"min": 0},
+                        "show_if_asset": ["Land", "Building", "House"]
                     },
                     {
-                        "key": "vehicle_type",
-                        "label": "Vehicle Type",
+                        "key": "vehicle_name",
+                        "label": "Vehicle Name/Brand",
                         "type": "text",
-                        "placeholder": "Toyota Allion 2020",
+                        "placeholder": "Toyota Camry",
+                        "show_if_asset": ["Vehicle"]
+                    },
+                    {
+                        "key": "vehicle_model",
+                        "label": "Model/Year",
+                        "type": "text",
+                        "placeholder": "2020",
                         "show_if_asset": ["Vehicle"]
                     },
                     {
                         "key": "estimated_value",
                         "label": "Estimated Value (BDT)",
                         "type": "number",
-                        "placeholder": "32000000",
+                        "placeholder": "5000000",
                         "validation": {"min": 0}
-                    },
-                    {
-                        "key": "description",
-                        "label": "Additional Details",
-                        "type": "textarea",
-                        "placeholder": "5-story building with 4 apartments",
-                        "rows": 2
                     }
                 ],
                 "hint": "Click 'Add Asset' to add more"

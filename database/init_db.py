@@ -32,11 +32,15 @@ def seed_required_documents():
                 logger.info("Required documents already seeded")
                 return
             
-            # ===== MANDATORY DOCUMENTS (3 - MUST upload) =====
+            # ===== MANDATORY DOCUMENTS (2 - MUST upload) =====
             mandatory_documents = [
                 ('passport_copy', 'Valid passport copy - REQUIRED', False, True),
                 ('nid_bangla', 'National ID card (Bangla) - REQUIRED', False, True),
-                ('bank_solvency', 'Bank solvency certificate - REQUIRED', False, True),
+            ]
+            
+            # ===== SUGGESTED DOCUMENTS (1 - Recommended to upload) =====
+            suggested_documents = [
+                ('bank_solvency', 'Bank solvency certificate - SUGGESTED (Upload if available)', False, False),
             ]
             
             # ===== OPTIONAL USER DOCUMENTS (5 - upload if available) =====
@@ -66,7 +70,19 @@ def seed_required_documents():
                     country="Iceland",
                     visa_type="Tourist",
                     document_type=DocumentType[doc_type.upper()],
-                    is_mandatory=is_mandatory,  # True for these 3
+                    is_mandatory=is_mandatory,  # True for passport & NID
+                    description=description,
+                    can_be_generated=can_generate
+                )
+                session.add(doc)
+            
+            # Add suggested documents
+            for doc_type, description, can_generate, is_mandatory in suggested_documents:
+                doc = RequiredDocument(
+                    country="Iceland",
+                    visa_type="Tourist",
+                    document_type=DocumentType[doc_type.upper()],
+                    is_mandatory=is_mandatory,  # False - suggested only
                     description=description,
                     can_be_generated=can_generate
                 )

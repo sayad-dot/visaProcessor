@@ -23,10 +23,12 @@ class ApplicationStatus(str, enum.Enum):
 class DocumentType(str, enum.Enum):
     """Types of documents in the system - ALL 21 types supported"""
     
-    # ===== MANDATORY USER DOCUMENTS (3) =====
+    # ===== MANDATORY USER DOCUMENTS (2) =====
     PASSPORT_COPY = "passport_copy"  # REQUIRED
     NID_BANGLA = "nid_bangla"  # REQUIRED
-    BANK_SOLVENCY = "bank_solvency"  # REQUIRED
+    
+    # ===== SUGGESTED USER DOCUMENTS (1) =====
+    BANK_SOLVENCY = "bank_solvency"  # SUGGESTED - Upload if available, fallback to questionnaire
     
     # ===== OPTIONAL USER DOCUMENTS (5 - upload if available) =====
     VISA_HISTORY = "visa_history"  # Optional - upload if exists
@@ -218,6 +220,7 @@ class QuestionDataType(str, enum.Enum):
     SELECT = "select"
     MULTISELECT = "multiselect"
     BOOLEAN = "boolean"
+    JSON = "json"  # For array data (banks, assets, travels)
 
 
 class QuestionnaireResponse(Base):

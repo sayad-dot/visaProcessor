@@ -435,6 +435,7 @@ const ApplicationDetailsPage = () => {
         open={questionnaireOpen}
         onClose={() => setQuestionnaireOpen(false)}
         applicationId={id}
+        applicationData={application}
         onComplete={handleQuestionnaireComplete}
       />
     </Container>

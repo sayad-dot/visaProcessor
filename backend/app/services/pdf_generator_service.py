@@ -18,7 +18,7 @@ import google.generativeai as genai
 from sqlalchemy.orm import Session
 from loguru import logger
 
-from app.models import ExtractedData, QuestionnaireResponse, GeneratedDocument, GenerationStatus
+from app.models import ExtractedData, QuestionnaireResponse, GeneratedDocument, GenerationStatus, VisaApplication
 from app.config import settings
 from app.services.auto_fill_service import auto_fill_questionnaire
 
@@ -82,6 +82,11 @@ class PDFGeneratorService:
         self.application_id = application_id
         self.output_dir = os.path.join("uploads", f"app_{application_id}", "generated")
         os.makedirs(self.output_dir, exist_ok=True)
+        
+        # Load application data (for name, email, phone)
+        self.application = self.db.query(VisaApplication).filter(
+            VisaApplication.id == application_id
+        ).first()
         
         # Configure Gemini
         genai.configure(api_key=settings.GEMINI_API_KEY)
@@ -218,9 +223,25 @@ class PDFGeneratorService:
         return self._get_array('previous_travels')
     
     def _get_value(self, *keys) -> str:
-        """Get value with priority: Questionnaire (user+auto-fill) → Extraction → KEY_MAPPING fallbacks"""
+        """Get value with priority: Application (name/email/phone) → Questionnaire → Extraction → KEY_MAPPING"""
         
-        # Priority 1: Check questionnaire data first (includes user input + auto-fill)
+        # PRIORITY 0: Use application data for name, email, phone (ALWAYS)
+        for key in keys:
+            clean_key = key.split('.')[-1] if '.' in key else key
+            
+            if self.application:
+                # Map questionnaire keys to application fields
+                if clean_key in ['full_name', 'applicant_name', 'name']:
+                    if self.application.applicant_name:
+                        return self.application.applicant_name
+                elif clean_key in ['email', 'applicant_email']:
+                    if self.application.applicant_email:
+                        return self.application.applicant_email
+                elif clean_key in ['phone', 'phone_number']:
+                    if self.application.phone_number:
+                        return self.application.phone_number
+        
+        # Priority 1: Check questionnaire data (includes user input + auto-fill)
         for key in keys:
             # Remove document type prefix if present (e.g., 'passport_copy.full_name' → 'full_name')
             clean_key = key.split('.')[-1] if '.' in key else key

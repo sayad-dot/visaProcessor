@@ -156,16 +156,10 @@ class PDFService:
                     logger.info("🔍 Poor text quality detected, will use OCR")
                     needs_ocr = True
             
-            # Step 3: Use OCR if needed and available
-            if needs_ocr and use_ocr and self.ocr_available:
-                logger.info("🤖 Switching to OCR extraction...")
-                ocr_text = self.extract_text_with_ocr(file_path)
-                
-                if len(ocr_text) > len(text_clean):
-                    logger.info(f"✅ OCR extracted more text: {len(ocr_text)} chars vs {text_length} chars")
-                    text_clean = ocr_text
-                else:
-                    logger.info(f"ℹ️ Standard extraction was better: {text_length} chars vs {len(ocr_text)} chars")
+            # Step 3: OCR DISABLED - Not needed for this system
+            # All data comes from questionnaire, OCR was optional feature
+            if needs_ocr:
+                logger.info("ℹ️ OCR disabled (not needed - questionnaire provides all data)")
             
             logger.info(f"✅ Final extraction: {len(text_clean)} characters from {os.path.basename(file_path)}")
             return text_clean
@@ -173,29 +167,23 @@ class PDFService:
         except Exception as e:
             logger.error(f"❌ Error extracting text from PDF {file_path}: {str(e)}")
             
-            # Last resort: try OCR if not already tried
-            if use_ocr and self.ocr_available:
-                logger.info("🔄 Attempting OCR as fallback...")
-                try:
-                    return self.extract_text_with_ocr(file_path)
-                except Exception as ocr_error:
-                    logger.error(f"❌ OCR fallback also failed: {str(ocr_error)}")
+            # OCR disabled - not needed for this application
+            logger.info("ℹ️ OCR disabled - questionnaire system handles all data collection")
             
             return ""
     
     def extract_text_with_ocr(self, file_path: str) -> str:
         """
-        Enhanced OCR extraction with multi-language support and better quality
+        OCR DISABLED - Not needed since all data comes from questionnaire
         
         Args:
             file_path: Path to the PDF file
             
         Returns:
-            Extracted text as string
+            Empty string (OCR disabled)
         """
-        if not self.ocr_available:
-            logger.warning("⚠️ OCR not available, returning empty string")
-            return ""
+        logger.info("ℹ️ OCR disabled - all data collected via questionnaire")
+        return ""  # OCR completely disabled to save memory
         
         try:
             import pytesseract
@@ -207,21 +195,23 @@ class PDFService:
             file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
             logger.info(f"📦 PDF file size: {file_size_mb:.2f} MB")
             
-            # Limit OCR for very large files
-            MAX_FILE_SIZE_MB = 5  # Limit OCR to 5MB files
+            # ULTRA-CONSERVATIVE limits for free tier (512MB RAM)
+            MAX_FILE_SIZE_MB = 2  # Only 2MB files for OCR (was 5MB)
             if file_size_mb > MAX_FILE_SIZE_MB:
-                logger.warning(f"⚠️ File too large for OCR ({file_size_mb:.2f} MB > {MAX_FILE_SIZE_MB} MB). Skipping OCR.")
-                return f"[File too large for OCR processing: {file_size_mb:.2f} MB. Please use smaller files or pre-processed text PDFs.]"
+                logger.warning(f"⚠️ File too large for OCR ({file_size_mb:.2f} MB > {MAX_FILE_SIZE_MB} MB). Using basic text extraction only.")
+                logger.warning(f"💡 For better OCR support, upgrade to paid plan or use smaller files.")
+                return f"[File too large for OCR: {file_size_mb:.2f} MB. Basic text extraction used. For OCR, use files <{MAX_FILE_SIZE_MB}MB or upgrade plan.]"
             
             # Get page count first without loading all pages
             with open(file_path, 'rb') as f:
                 pdf_reader = PyPDF2.PdfReader(f)
                 total_pages = len(pdf_reader.pages)
             
-            # Limit number of pages to process
-            MAX_PAGES = 10
+            # STRICT page limit for free tier
+            MAX_PAGES = 3  # Only 3 pages max (was 10)
             if total_pages > MAX_PAGES:
-                logger.warning(f"⚠️ PDF has {total_pages} pages. Processing only first {MAX_PAGES} pages to prevent memory issues.")
+                logger.warning(f"⚠️ PDF has {total_pages} pages. Processing only first {MAX_PAGES} pages (free tier limit).")
+                logger.warning(f"💡 Upgrade to paid plan for unlimited page processing.")
                 total_pages = MAX_PAGES
             
             logger.info(f"🤖 Starting memory-efficient OCR on {total_pages} page(s)")
@@ -233,12 +223,12 @@ class PDFService:
                 try:
                     logger.info(f"🔍 OCR processing page {page_num+1}/{total_pages}...")
                     
-                    # Convert SINGLE page to image (memory efficient)
+                    # Convert SINGLE page to image (ultra memory efficient)
                     images = convert_from_path(
                         file_path,
                         first_page=page_num + 1,
                         last_page=page_num + 1,
-                        dpi=200,  # REDUCED from 400 to 200 (75% less memory)
+                        dpi=150,  # MINIMAL DPI for free tier (90% less memory than 400)
                         fmt='jpeg',
                         grayscale=True
                     )

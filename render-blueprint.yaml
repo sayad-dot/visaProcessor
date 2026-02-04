@@ -6,7 +6,7 @@ services:
   - type: web
     name: visa-backend
     runtime: python
-    plan: starter  # Upgraded from free (512MB → 2GB RAM)
+    plan: free  # 512MB RAM - OCR completely disabled, memory usage ~100MB
     branch: main
     rootDir: backend
     buildCommand: bash build.sh
@@ -43,3 +43,7 @@ services:
         value: "INFO"
       - key: LOG_FILE
         value: "/tmp/logs/app.log"
+      - key: ENABLE_OCR
+        value: "false"
+      - key: OCR_DISABLED_REASON
+        value: "All data collected via questionnaire - OCR not needed"

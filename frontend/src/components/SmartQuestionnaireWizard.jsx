@@ -46,7 +46,7 @@ import {
 import { toast } from 'react-toastify';
 import { API_BASE_URL } from '../config';
 
-const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) => {
+const SmartQuestionnaireWizard = ({ open, onClose, applicationId, applicationData, onComplete }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autoFilling, setAutoFilling] = useState(false);
@@ -85,22 +85,53 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
       if (response.ok) {
         const data = await response.json();
         if (data.answers) {
-          setAnswers(data.answers);
+          // Pre-fill with application data if not already filled
+          const preFilledAnswers = {
+            ...data.answers,
+            full_name: data.answers.full_name || applicationData?.applicant_name || '',
+            email: data.answers.email || applicationData?.applicant_email || '',
+            phone: data.answers.phone || applicationData?.phone_number || ''
+          };
+          setAnswers(preFilledAnswers);
           setProgress(data.progress);
+        } else {
+          // First time - auto-fill from application
+          setAnswers({
+            full_name: applicationData?.applicant_name || '',
+            email: applicationData?.applicant_email || '',
+            phone: applicationData?.phone_number || ''
+          });
         }
+      } else {
+        // No saved answers - auto-fill from application
+        setAnswers({
+          full_name: applicationData?.applicant_name || '',
+          email: applicationData?.applicant_email || '',
+          phone: applicationData?.phone_number || ''
+        });
       }
     } catch (error) {
-      console.log('No saved answers yet');
+      console.log('No saved answers yet - using application data');
+      // Auto-fill from application data
+      setAnswers({
+        full_name: applicationData?.applicant_name || '',
+        email: applicationData?.applicant_email || '',
+        phone: applicationData?.phone_number || ''
+      });
     }
   };
 
   const handleAutoFill = async () => {
-    if (!window.confirm('Auto-fill will generate realistic data for all missing fields. Continue?')) {
+    if (!window.confirm('AI will intelligently fill missing fields with realistic data. Continue?')) {
       return;
     }
 
     try {
       setAutoFilling(true);
+      
+      // Show analyzing progress
+      toast.info('🤖 Analyzing your data...', { autoClose: 1000 });
+      
       const response = await fetch(`${API_BASE_URL}/questionnaire/smart-auto-fill/${applicationId}`, {
         method: 'POST'
       });
@@ -108,11 +139,22 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
       if (!response.ok) throw new Error('Auto-fill failed');
       
       const data = await response.json();
+      
+      // Show filling progress
+      toast.info('✍️ Filling fields intelligently...', { autoClose: 1000 });
+      
+      // Update answers
       setAnswers(data.filled_answers);
       
-      toast.success(`✨ Auto-filled ${data.summary.auto_filled_count} fields!`);
+      // Show success
+      setTimeout(() => {
+        toast.success(`✨ Successfully filled ${data.summary.auto_filled_count} fields with AI!`, {
+          autoClose: 3000
+        });
+      }, 1200);
+      
     } catch (error) {
-      toast.error('Auto-fill failed');
+      toast.error('❌ AI auto-fill failed. Please try again.');
       console.error(error);
     } finally {
       setAutoFilling(false);
@@ -263,6 +305,11 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
   };
 
   const renderQuestion = (question) => {
+    // Hide fields that are auto-filled from application (no need to show user)
+    if (['full_name', 'email', 'phone'].includes(question.key)) {
+      return null; // Backend will use application data directly
+    }
+    
     // Check conditional display
     if (!checkCondition({ show_if: question.show_if })) {
       return null;
@@ -270,9 +317,24 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
 
     const value = answers[question.key] || '';
     const error = errors[question.key];
+    
+    // Check if this is a conditional field (appears based on another answer)
+    const isConditional = question.show_if && Object.keys(question.show_if).length > 0;
 
     return (
-      <Box key={question.key} sx={{ mb: 3 }}>
+      <Box 
+        key={question.key} 
+        sx={{ 
+          mb: 3,
+          // Subtle styling for conditional fields
+          ...(isConditional && {
+            p: 2,
+            borderLeft: '3px solid #2196F3',
+            backgroundColor: 'rgba(33, 150, 243, 0.05)',
+            borderRadius: 1
+          })
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <Typography variant="body1" sx={{ fontWeight: 500 }}>
             {question.label}
@@ -404,11 +466,25 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
 
   const renderArrayField = (question) => {
     const array = answers[question.key] || [];
+    
+    // Check if array field is conditional
+    const isConditional = question.show_if && Object.keys(question.show_if).length > 0;
 
     return (
       <Box sx={{ mt: 1 }}>
         {array.map((item, index) => (
-          <Card key={index} sx={{ mb: 2, bgcolor: 'grey.50' }}>
+          <Card 
+            key={index} 
+            sx={{ 
+              mb: 2, 
+              bgcolor: 'grey.50',
+              // Subtle border for conditional arrays
+              ...(isConditional && {
+                borderLeft: '3px solid #2196F3',
+                backgroundColor: 'rgba(33, 150, 243, 0.03)'
+              })
+            }}
+          >
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                 <Typography variant="subtitle2" color="primary">
@@ -424,7 +500,16 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
               </Box>
 
               <Grid container spacing={2}>
-                {question.fields?.map(field => (
+                {question.fields?.map(field => {
+                  // Check if field should be displayed based on asset_type
+                  if (field.show_if_asset) {
+                    const assetType = item.asset_type;
+                    if (!assetType || !field.show_if_asset.includes(assetType)) {
+                      return null; // Hide field if condition not met
+                    }
+                  }
+                  
+                  return (
                   <Grid item xs={12} sm={field.type === 'textarea' ? 12 : 6} key={field.key}>
                     <Typography variant="caption" color="text.secondary">
                       {field.label}
@@ -483,7 +568,8 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
                       />
                     )}
                   </Grid>
-                ))}
+                  );
+                })}
               </Grid>
             </CardContent>
           </Card>
@@ -532,6 +618,45 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
     );
   };
 
+  // Validate current section before moving to next
+  const validateCurrentSection = () => {
+    const section = questionnaire?.[sections[activeStep]];
+    if (!section) return true;
+
+    const unansweredRequired = [];
+    
+    section.questions.forEach(question => {
+      // Check if question should be displayed (conditional logic)
+      if (!checkCondition({ show_if: question.show_if })) {
+        return; // Skip hidden questions
+      }
+
+      // Check if required and not answered
+      if (question.required) {
+        const answer = answers[question.key];
+        if (!answer || (typeof answer === 'string' && !answer.trim())) {
+          unansweredRequired.push(question.label);
+        }
+      }
+    });
+
+    if (unansweredRequired.length > 0) {
+      toast.error(
+        `Please answer all required questions before proceeding:\n${unansweredRequired.join(', ')}`,
+        { autoClose: 5000 }
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateCurrentSection()) {
+      setActiveStep(prev => prev + 1);
+    }
+  };
+
   if (loading) {
     return (
       <Dialog open={open} maxWidth="md" fullWidth>
@@ -552,24 +677,9 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Smart Questionnaire
-          </Typography>
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={autoFilling ? <CircularProgress size={16} color="inherit" /> : <AutoFillIcon />}
-            onClick={handleAutoFill}
-            disabled={autoFilling}
-            sx={{
-              background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
-              boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)'
-            }}
-          >
-            {autoFilling ? 'Auto-filling...' : '✨ Auto-fill Missing Fields'}
-          </Button>
-        </Box>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+          Smart Questionnaire
+        </Typography>
 
         {progress && (
           <Box sx={{ mt: 2 }}>
@@ -609,9 +719,45 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
       </DialogContent>
 
       <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
-        <Button onClick={onClose} color="inherit">
-          Close
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button onClick={onClose} color="inherit">
+            Close
+          </Button>
+          
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={autoFilling ? <CircularProgress size={20} color="inherit" /> : <AutoFillIcon />}
+            onClick={handleAutoFill}
+            disabled={autoFilling}
+            sx={{
+              background: autoFilling 
+                ? 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)'
+                : 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
+              boxShadow: '0 4px 8px 2px rgba(255, 105, 135, .4)',
+              px: 3,
+              py: 1.5,
+              fontSize: '1rem',
+              fontWeight: 600,
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 12px 3px rgba(255, 105, 135, .5)'
+              },
+              '&:disabled': {
+                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)'
+              }
+            }}
+          >
+            {autoFilling ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <span>🤖 Gathering Information...</span>
+              </Box>
+            ) : (
+              '✨ AI Auto-fill'
+            )}
+          </Button>
+        </Box>
 
         <Box>
           <Button
@@ -636,7 +782,7 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, onComplete }) 
           {activeStep < sections.length - 1 ? (
             <Button
               variant="contained"
-              onClick={() => setActiveStep(prev => prev + 1)}
+              onClick={handleNext}
               endIcon={<NextIcon />}
             >
               Next

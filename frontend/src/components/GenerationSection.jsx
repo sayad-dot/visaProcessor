@@ -318,7 +318,7 @@ const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
               <Grid container spacing={1}>
                 {Object.keys(docTypeNames).map((docKey, index) => {
                   const isCompleted = completedDocuments.some(d => d.type === docKey);
-                  const isCurrent = currentDocument === docTypeNames[docKey];
+                  const isCurrent = !isCompleted && currentDocument === docTypeNames[docKey]; // Don't show as current if already completed
                   
                   return (
                     <Grid item xs={12} sm={6} key={docKey}>

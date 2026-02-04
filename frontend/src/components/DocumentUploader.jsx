@@ -34,7 +34,9 @@ const DocumentUploader = ({
 }) => {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
@@ -74,7 +76,10 @@ const DocumentUploader = ({
     setFiles([]);
     setError(null);
     setSuccess(false);
+    setUploading(false);
+    setAnalyzing(false);
     setUploadProgress(0);
+    setAnalyzeProgress(0);
   };
 
   // Upload file
@@ -85,14 +90,16 @@ const DocumentUploader = ({
     }
 
     setUploading(true);
+    setAnalyzing(false);
     setError(null);
     setSuccess(false);
     setUploadProgress(0);
+    setAnalyzeProgress(0);
 
     try {
       const file = files[0];
 
-      // Simulate progress for better UX
+      // Simulate upload progress for better UX
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           if (prev >= 90) {
@@ -107,20 +114,50 @@ const DocumentUploader = ({
 
       clearInterval(progressInterval);
       setUploadProgress(100);
+      
+      // Show "Analyzing..." stage (hardcoded for professional UX)
+      setUploading(false);
+      setAnalyzing(true);
+      
+      // Generate random target between 90-100% for realistic variation
+      const randomTarget = Math.floor(Math.random() * 11) + 90; // 90-100%
+      
+      // Simulate analysis progress with random increments
+      const analyzeInterval = setInterval(() => {
+        setAnalyzeProgress((prev) => {
+          if (prev >= randomTarget) {
+            clearInterval(analyzeInterval);
+            return randomTarget;
+          }
+          // Random increment between 15-25% for natural feel
+          const increment = Math.floor(Math.random() * 11) + 15;
+          return Math.min(prev + increment, randomTarget);
+        });
+      }, 250);
+      
+      // Wait for analysis animation to complete (1.5-2 seconds random)
+      const waitTime = Math.floor(Math.random() * 500) + 1500;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      clearInterval(analyzeInterval);
+      setAnalyzeProgress(randomTarget);
+      
+      setAnalyzing(false);
       setSuccess(true);
 
       // Clear files after successful upload
       setTimeout(() => {
         setFiles([]);
         setUploadProgress(0);
+        setAnalyzeProgress(0);
         if (onUploadSuccess) {
           onUploadSuccess(data);
         }
-      }, 1000);
+      }, 1500);
 
     } catch (err) {
       console.error('Upload error:', err);
       setError(err.message || 'Failed to upload document');
+      setAnalyzing(false);
       if (onUploadError) {
         onUploadError(err);
       }
@@ -205,15 +242,25 @@ const DocumentUploader = ({
           {/* Upload Progress */}
           {uploading && (
             <Box sx={{ mt: 2 }}>
-              <LinearProgress variant="determinate" value={uploadProgress} />
+              <LinearProgress variant="determinate" value={uploadProgress} color="primary" />
               <Typography variant="caption" sx={{ mt: 0.5, display: 'block' }}>
-                Uploading: {uploadProgress}%
+                📤 Uploading: {uploadProgress}%
+              </Typography>
+            </Box>
+          )}
+          
+          {/* Analyzing Progress */}
+          {analyzing && (
+            <Box sx={{ mt: 2 }}>
+              <LinearProgress variant="determinate" value={analyzeProgress} color="success" />
+              <Typography variant="caption" sx={{ mt: 0.5, display: 'block', color: 'success.main' }}>
+                🔍 Analyzing document: {analyzeProgress}%
               </Typography>
             </Box>
           )}
 
           {/* Upload Button - Prominent */}
-          {!uploading && !success && (
+          {!uploading && !analyzing && !success && (
             <Box sx={{ mt: 3, textAlign: 'center' }}>
               <button
                 onClick={handleUpload}
@@ -259,7 +306,7 @@ const DocumentUploader = ({
       {/* Success Message */}
       {success && (
         <Alert severity="success" sx={{ mt: 2 }}>
-          Document uploaded successfully!
+          ✅ Document uploaded and analyzed successfully!
         </Alert>
       )}
     </Box>
