@@ -237,9 +237,9 @@ class PDFGeneratorService:
                 elif clean_key in ['email', 'applicant_email']:
                     if self.application.applicant_email:
                         return self.application.applicant_email
-                elif clean_key in ['phone', 'phone_number']:
-                    if self.application.phone_number:
-                        return self.application.phone_number
+                elif clean_key in ['phone', 'phone_number', 'applicant_phone']:
+                    if self.application.applicant_phone:
+                        return self.application.applicant_phone
         
         # Priority 1: Check questionnaire data (includes user input + auto-fill)
         for key in keys:

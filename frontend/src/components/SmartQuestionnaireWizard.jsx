@@ -90,7 +90,7 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, applicationDat
             ...data.answers,
             full_name: data.answers.full_name || applicationData?.applicant_name || '',
             email: data.answers.email || applicationData?.applicant_email || '',
-            phone: data.answers.phone || applicationData?.phone_number || ''
+            phone: data.answers.phone || applicationData?.applicant_phone || ''
           };
           setAnswers(preFilledAnswers);
           setProgress(data.progress);
@@ -99,7 +99,7 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, applicationDat
           setAnswers({
             full_name: applicationData?.applicant_name || '',
             email: applicationData?.applicant_email || '',
-            phone: applicationData?.phone_number || ''
+            phone: applicationData?.applicant_phone || ''
           });
         }
       } else {
@@ -107,7 +107,7 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, applicationDat
         setAnswers({
           full_name: applicationData?.applicant_name || '',
           email: applicationData?.applicant_email || '',
-          phone: applicationData?.phone_number || ''
+          phone: applicationData?.applicant_phone || ''
         });
       }
     } catch (error) {
@@ -116,7 +116,7 @@ const SmartQuestionnaireWizard = ({ open, onClose, applicationId, applicationDat
       setAnswers({
         full_name: applicationData?.applicant_name || '',
         email: applicationData?.applicant_email || '',
-        phone: applicationData?.phone_number || ''
+        phone: applicationData?.applicant_phone || ''
       });
     }
   };
