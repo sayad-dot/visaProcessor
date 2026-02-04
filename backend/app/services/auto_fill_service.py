@@ -386,8 +386,15 @@ class AutoFillService:
         # Monthly income
         if not self.filled_data.get("monthly_income"):
             # Based on balance (assume 6-10 months of income in bank)
-            total_balance = sum(b.get("balance", 0) for b in self.filled_data.get("banks", []))
-            monthly = total_balance // random.randint(6, 10)
+            # Convert balance to int, handle both string and numeric values
+            total_balance = 0
+            for b in self.filled_data.get("banks", []):
+                balance = b.get("balance", 0)
+                try:
+                    total_balance += int(float(str(balance).replace(",", "")))
+                except (ValueError, AttributeError):
+                    total_balance += 0
+            monthly = total_balance // random.randint(6, 10) if total_balance > 0 else 100000
             self.filled_data["monthly_income"] = monthly
         
         # Monthly expenses (70-80% of income)
