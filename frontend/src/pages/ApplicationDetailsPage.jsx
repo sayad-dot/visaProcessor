@@ -25,6 +25,7 @@ import DocumentList from '../components/DocumentList'
 import DocumentUploader from '../components/DocumentUploader'
 import AnalysisSection from '../components/AnalysisSection'
 import SimpleQuestionnaireWizard from '../components/SimpleQuestionnaireWizard'
+import SmartQuestionnaireWizard from '../components/SmartQuestionnaireWizard'
 import GenerationSection from '../components/GenerationSection'
 
 const ApplicationDetailsPage = () => {
@@ -343,19 +344,9 @@ const ApplicationDetailsPage = () => {
           {/* Documents Section */}
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Documents Management
-                </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={processing ? <CircularProgress size={20} color="inherit" /> : <AnalyticsIcon />}
-                  onClick={handleProcessDocuments}
-                  disabled={!allDocumentsUploaded || processing}
-                >
-                  {processing ? 'Processing...' : 'Analyze Documents'}
-                </Button>
-              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                Documents Management
+              </Typography>
               
               <DocumentList
                 requiredDocuments={requiredDocuments}
@@ -439,8 +430,8 @@ const ApplicationDetailsPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Questionnaire Wizard Dialog */}
-      <SimpleQuestionnaireWizard
+      {/* Smart Questionnaire Wizard Dialog */}
+      <SmartQuestionnaireWizard
         open={questionnaireOpen}
         onClose={() => setQuestionnaireOpen(false)}
         applicationId={id}

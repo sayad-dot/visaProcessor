@@ -20,10 +20,62 @@ from loguru import logger
 
 from app.models import ExtractedData, QuestionnaireResponse, GeneratedDocument, GenerationStatus
 from app.config import settings
+from app.services.auto_fill_service import auto_fill_questionnaire
 
 
 class PDFGeneratorService:
     """Service for generating all visa application PDFs"""
+    
+    # Comprehensive key mapping: questionnaire keys → PDF template paths
+    KEY_MAPPING = {
+        # Personal Information
+        "full_name": ["full_name", "passport_copy.full_name", "nid_bangla.name_english", "nid_english.full_name", "personal.full_name"],
+        "email": ["email", "contact.email", "personal.email"],
+        "phone": ["phone", "contact.phone", "personal.phone"],
+        "date_of_birth": ["date_of_birth", "passport_copy.date_of_birth", "nid_bangla.date_of_birth", "personal.dob"],
+        "gender": ["gender", "passport_copy.gender", "personal.gender"],
+        "father_name": ["father_name", "nid_bangla.father_name", "personal.father_name"],
+        "mother_name": ["mother_name", "nid_bangla.mother_name", "personal.mother_name"],
+        "permanent_address": ["permanent_address", "nid_bangla.permanent_address", "address.permanent"],
+        "present_address": ["present_address", "address.present", "contact.address"],
+        "passport_number": ["passport_number", "passport_copy.passport_number", "personal.passport_number"],
+        "passport_issue_date": ["passport_issue_date", "passport_copy.issue_date"],
+        "passport_expiry_date": ["passport_expiry_date", "passport_copy.expiry_date"],
+        "nid_number": ["nid_number", "nid_bangla.nid_number", "personal.nid_number"],
+        "is_married": ["is_married", "personal.marital_status"],
+        "spouse_name": ["spouse_name", "personal.spouse_name"],
+        "number_of_children": ["number_of_children", "personal.children"],
+        "blood_group": ["blood_group", "personal.blood_group"],
+        
+        # Employment & Business
+        "employment_status": ["employment_status", "employment.employment_status"],
+        "job_title": ["job_title", "employment.job_title", "employment.position"],
+        "company_name": ["company_name", "employment.company_name", "business.company_name"],
+        "company_address": ["company_address", "employment.company_address", "business.address"],
+        "business_type": ["business_type", "business.business_type"],
+        "business_start_year": ["business_start_year", "business.start_year"],
+        "number_of_employees": ["number_of_employees", "business.employees"],
+        
+        # Travel Details
+        "travel_purpose": ["travel_purpose", "travel.purpose", "purpose"],
+        "duration_of_stay": ["duration_of_stay", "travel.duration", "hotel_booking.duration"],
+        "arrival_date": ["arrival_date", "travel.arrival_date", "hotel_booking.check_in_date", "air_ticket.departure_date"],
+        "departure_date": ["departure_date", "travel.departure_date", "hotel_booking.check_out_date", "air_ticket.return_date"],
+        "places_to_visit": ["places_to_visit", "travel.places", "hotel_booking.hotel_location"],
+        "accommodation_details": ["accommodation_details", "hotel_booking.hotel_name"],
+        
+        # Financial Information
+        "monthly_income": ["monthly_income", "financial.monthly_income", "income_tax_3years.monthly_income"],
+        "annual_income": ["annual_income", "financial.annual_income", "income_tax_3years.annual_income"],
+        "monthly_expenses": ["monthly_expenses", "financial.monthly_expenses"],
+        "total_rental_income": ["total_rental_income", "financial.rental_income"],
+        
+        # Other Information
+        "tin_number": ["tin_number", "tin_certificate.tin_number", "income_tax_3years.tin_number"],
+        "tax_circle": ["tax_circle", "tin_certificate.tax_circle"],
+        "reasons_to_return": ["reasons_to_return", "travel.reasons_to_return"],
+        "additional_info": ["additional_info", "other.additional_info"],
+    }
     
     def __init__(self, db: Session, application_id: int):
         self.db = db
@@ -38,6 +90,9 @@ class PDFGeneratorService:
         # Load all extracted data
         self.extracted_data = self._load_extracted_data()
         self.questionnaire_data = self._load_questionnaire_data()
+        
+        # Auto-fill missing data with realistic values
+        self._auto_fill_missing_data()
         
     def _load_extracted_data(self) -> Dict[str, Any]:
         """Load all extracted data from database"""
@@ -61,45 +116,162 @@ class PDFGeneratorService:
         return data
     
     def _load_questionnaire_data(self) -> Dict[str, str]:
-        """Load all questionnaire responses"""
+        """Load all questionnaire responses (including auto-filled data)"""
         responses = self.db.query(QuestionnaireResponse).filter(
             QuestionnaireResponse.application_id == self.application_id
         ).all()
         
         data = {}
         for response in responses:
-            data[response.question_key] = response.answer
+            # Handle JSON arrays (banks, assets, travels) - stored as JSON strings
+            import json
+            try:
+                # Try to parse as JSON (for arrays stored as JSON strings in TEXT fields)
+                if isinstance(response.answer, str) and (response.answer.startswith('[') or response.answer.startswith('{')):
+                    data[response.question_key] = json.loads(response.answer)
+                else:
+                    data[response.question_key] = response.answer
+            except:
+                data[response.question_key] = response.answer
         
         # Debug logging
         logger.info(f"📝 Loaded questionnaire data for app {self.application_id}")
         logger.info(f"   Total responses: {len(data)}")
         if data:
             logger.info(f"   Sample keys: {list(data.keys())[:5]}")
+            # Log array fields
+            array_fields = [k for k, v in data.items() if isinstance(v, list)]
+            if array_fields:
+                logger.info(f"   Array fields: {array_fields}")
         
         return data
     
+    def _auto_fill_missing_data(self):
+        """Auto-fill missing data with realistic values to ensure NO BLANK DATA"""
+        logger.info(f"🤖 Auto-filling missing data for app {self.application_id}")
+        
+        try:
+            # Get auto-filled data
+            filled_data, summary = auto_fill_questionnaire(self.questionnaire_data)
+            
+            # Add filled data to questionnaire_data (only for missing keys)
+            filled_count = 0
+            for key, value in filled_data.items():
+                if key not in self.questionnaire_data or not self.questionnaire_data.get(key):
+                    self.questionnaire_data[key] = value
+                    filled_count += 1
+            
+            logger.info(f"✅ Auto-filled {filled_count} missing fields")
+            logger.info(f"   Summary: {summary}")
+            
+        except Exception as e:
+            logger.error(f"❌ Auto-fill error: {e}")
+            # Continue without auto-fill (better than failing completely)
+    
+    def _get_array(self, key: str) -> List[Dict[str, Any]]:
+        """Get array data from questionnaire (banks, assets, travels, etc.)"""
+        value = self.questionnaire_data.get(key)
+        
+        if not value:
+            logger.debug(f"📋 Array '{key}' not found, returning empty list")
+            return []
+        
+        if isinstance(value, list):
+            logger.debug(f"✅ Found array '{key}' with {len(value)} items")
+            return value
+        
+        # Try to parse JSON string
+        if isinstance(value, str):
+            try:
+                import json
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    logger.debug(f"✅ Parsed array '{key}' from JSON with {len(parsed)} items")
+                    return parsed
+            except:
+                pass
+        
+        logger.warning(f"⚠️  Array '{key}' is not a list: {type(value)}")
+        return []
+    
+    def _get_banks(self) -> List[Dict[str, Any]]:
+        """Get bank accounts from questionnaire or auto-filled data"""
+        banks = self._get_array('banks')
+        if not banks:
+            # Fallback to single bank data if arrays not available
+            bank_name = self._get_value('bank_name', 'bank_solvency.bank_name')
+            if bank_name:
+                return [{
+                    'bank_name': bank_name,
+                    'account_type': self._get_value('account_type', 'bank_solvency.account_type') or 'Savings Account',
+                    'account_number': self._get_value('account_number', 'bank_solvency.account_number') or 'N/A',
+                    'balance': self._get_value('balance', 'bank_solvency.balance') or '0'
+                }]
+        return banks
+    
+    def _get_assets(self) -> List[Dict[str, Any]]:
+        """Get assets from questionnaire or auto-filled data"""
+        return self._get_array('assets')
+    
+    def _get_previous_travels(self) -> List[Dict[str, Any]]:
+        """Get previous travels from questionnaire"""
+        return self._get_array('previous_travels')
+    
     def _get_value(self, *keys) -> str:
-        """Get value from extracted data or questionnaire, trying multiple keys"""
+        """Get value with priority: Questionnaire (user+auto-fill) → Extraction → KEY_MAPPING fallbacks"""
+        
+        # Priority 1: Check questionnaire data first (includes user input + auto-fill)
         for key in keys:
-            # Try extracted data
+            # Remove document type prefix if present (e.g., 'passport_copy.full_name' → 'full_name')
+            clean_key = key.split('.')[-1] if '.' in key else key
+            
+            # Direct match in questionnaire
+            value = self.questionnaire_data.get(clean_key)
+            if value and str(value).strip():
+                logger.debug(f"✅ Found '{key}' in questionnaire: {value}")
+                return str(value)
+            
+            # Try with original key (for dotted keys in questionnaire)
+            value = self.questionnaire_data.get(key)
+            if value and str(value).strip():
+                logger.debug(f"✅ Found '{key}' in questionnaire: {value}")
+                return str(value)
+            
+            # Check KEY_MAPPING for alternative questionnaire keys
+            if clean_key in self.KEY_MAPPING:
+                for mapped_key in self.KEY_MAPPING[clean_key]:
+                    # Check if it's a simple key in questionnaire
+                    if '.' not in mapped_key:
+                        value = self.questionnaire_data.get(mapped_key)
+                        if value and str(value).strip():
+                            logger.debug(f"✅ Found '{key}' via mapping '{mapped_key}' in questionnaire: {value}")
+                            return str(value)
+        
+        # Priority 2: Check extracted data from documents
+        for key in keys:
             if '.' in key:
                 doc_type, field = key.split('.', 1)
-                # Check if this document type exists in extracted_data
                 if doc_type in self.extracted_data:
-                    # Handle nested field access (e.g., 'passport_copy.full_name')
                     value = self.extracted_data[doc_type].get(field)
-                    if value:
-                        logger.debug(f"✅ Found '{key}' in extracted_data['{doc_type}']: {value}")
+                    if value and str(value).strip():
+                        logger.debug(f"✅ Found '{key}' in extracted_data: {value}")
                         return str(value)
-            
-            # Try questionnaire
-            value = self.questionnaire_data.get(key)
-            if value:
-                logger.debug(f"✅ Found '{key}' in questionnaire_data: {value}")
-                return str(value)
         
-        # Log missing value
-        logger.warning(f"⚠️  Missing value for keys: {keys}")
+        # Priority 3: Try KEY_MAPPING alternatives in extracted data
+        for key in keys:
+            clean_key = key.split('.')[-1] if '.' in key else key
+            if clean_key in self.KEY_MAPPING:
+                for mapped_key in self.KEY_MAPPING[clean_key]:
+                    if '.' in mapped_key:
+                        doc_type, field = mapped_key.split('.', 1)
+                        if doc_type in self.extracted_data:
+                            value = self.extracted_data[doc_type].get(field)
+                            if value and str(value).strip():
+                                logger.debug(f"✅ Found '{key}' via mapping '{mapped_key}' in extraction: {value}")
+                                return str(value)
+        
+        # If still not found, log warning (should be rare due to auto-fill)
+        logger.warning(f"⚠️  Missing value for keys: {keys} (even after auto-fill)")
         return ""
     
     def _create_document_record(self, doc_type: str, file_name: str) -> GeneratedDocument:
@@ -188,20 +360,24 @@ class PDFGeneratorService:
         try:
             self._update_progress(doc_record, 10)
 
-            # 1. Collect all data
+            # 1. Collect all data with enhanced priority
+            # Get bank accounts for financial summary
+            banks = self._get_banks()
+            total_balance = sum(float(bank.get('balance', 0)) for bank in banks) if banks else 0
+            
             applicant_data = {
-                "name": self._get_value('passport_copy.full_name', 'nid_bangla.name_english', 'personal.full_name'),
-                "passport": self._get_value('passport_copy.passport_number', 'personal.passport_number'),
-                "profession": self._get_value('employment.job_title', 'business.business_type'),
-                "company": self._get_value('employment.company_name', 'business.business_name', 'business.company_name'),
-                "purpose": self._get_value('travel_purpose', 'travel.purpose', 'purpose'),
-                "travel_dates": self._get_value('air_ticket.travel_dates', 'hotel_booking.check_in_date', 'flight.departure_date'),
-                "places": self._get_value('travel_purpose.places_to_visit', 'hotel_booking.hotel_location', 'hotel.hotel_name'),
-                "income": self._get_value('income_tax_3years.annual_income', 'financial.monthly_income', 'financial.annual_income'),
-                "bank_balance": self._get_value('bank_solvency.current_balance', 'bank_solvency.balance_amount', 'financial.bank_balance'),
-                "family_ties": self._get_value('home_ties.family_members', 'personal.marital_status'),
-                "property_ties": self._get_value('asset_valuation.total_value', 'assets.property_description', 'assets.total_asset_value'),
-                "reasons_to_return": self._get_value('home_ties.reasons_to_return', 'personal.reasons_to_return')
+                "name": self._get_value('full_name', 'passport_copy.full_name', 'nid_bangla.name_english'),
+                "passport": self._get_value('passport_number', 'passport_copy.passport_number'),
+                "profession": self._get_value('job_title', 'employment.job_title', 'business_type', 'business.business_type'),
+                "company": self._get_value('company_name', 'employment.company_name', 'business.business_name'),
+                "purpose": self._get_value('travel_purpose', 'travel.purpose', 'purpose') or 'Tourism and exploring Iceland',
+                "travel_dates": self._get_value('arrival_date', 'travel.arrival_date', 'hotel_booking.check_in_date') or 'Planned dates',
+                "places": self._get_value('places_to_visit', 'travel.places', 'hotel_booking.hotel_location') or 'Reykjavik, Golden Circle, Blue Lagoon',
+                "income": self._get_value('annual_income', 'monthly_income', 'financial.annual_income'),
+                "bank_balance": f"BDT {total_balance:,.0f}" if total_balance > 0 else self._get_value('bank_solvency.current_balance'),
+                "family_ties": self._get_value('spouse_name', 'number_of_children', 'personal.marital_status') or 'Family in Bangladesh',
+                "property_ties": self._get_value('asset_valuation.total_value', 'assets.property_description') or 'Property ownership',
+                "reasons_to_return": self._get_value('reasons_to_return', 'home_ties.reasons_to_return') or 'Family, business, and property responsibilities in Bangladesh'
             }
             self._update_progress(doc_record, 20)
 
@@ -234,9 +410,9 @@ class PDFGeneratorService:
             MD SWAPON SHEIKH
             """
 
-            # 3. Construct the new, advanced prompt
+            # 3. Construct the new, advanced prompt - EXPANDED FOR 2 PAGES
             prompt = f"""
-            You are an expert visa application consultant, specializing in crafting compelling cover letters for Schengen visa applications. Your task is to write a professional and persuasive cover letter for a tourist visa to Iceland.
+            You are an expert visa application consultant, specializing in crafting compelling cover letters for Iceland Embassy Schengen visa applications. Your task is to write a professional and persuasive cover letter that fills EXACTLY 2 FULL PAGES.
 
             **Analysis of a High-Quality Sample Letter:**
             Here is an example of a good cover letter. Notice its structure, tone, and the way it clearly presents information and addresses potential concerns.
@@ -259,21 +435,46 @@ class PDFGeneratorService:
             - Home Ties (Assets): Owns {applicant_data['property_ties']}
             - Stated Reason to Return: {applicant_data['reasons_to_return']}
 
-            **Your Task: Generate a New Cover Letter**
-            Based on the applicant's profile, write a new cover letter.
+            **Your Task: Generate a New Cover Letter for Iceland Embassy**
+            Based on the applicant's profile, write a new cover letter that follows Iceland Embassy expectations.
+
+            **CRITICAL REQUIREMENTS:**
+            - Length: MUST be 1600-1800 words to fill EXACTLY 2 FULL PAGES
+            - Tone: Use simple, school-grade English (10th-12th grade level) - clear and conversational but professional
+            - Format: Follow how Iceland Embassy wants cover letters structured
+            - Content: Be detailed, specific, and convincing
 
             **Instructions:**
-            1.  **Structure and Content:** The letter must be formal and structured into 4-5 clear paragraphs:
-                *   **Paragraph 1: Introduction:** Introduce the applicant, their profession, and the purpose of the letter (applying for an Iceland tourist visa for specific dates).
-                *   **Paragraph 2: Purpose of Travel:** Elaborate on the travel plans. Mention the tourist nature of the trip, key attractions they wish to see in Iceland ({applicant_data['places']}), and their excitement for the trip.
-                *   **Paragraph 3: Financial Sponsorship:** Clearly state that the applicant will be funding their own trip. Mention their financial stability by referencing their income and savings, demonstrating their capacity to cover all costs without issue.
-                *   **Paragraph 4: Strong Ties to Home Country:** This is crucial. Create a compelling argument for why the applicant will return to their home country. Synthesize the information about their job, family, and property into a strong statement of their ties and responsibilities at home.
-                *   **Paragraph 5: Conclusion:** End with a polite closing, expressing gratitude for the consideration of their application and stating their availability for further information.
-            2.  **Tone:** The tone should be professional, confident, and respectful. Avoid overly casual language or emotional pleas.
+            1.  **Structure and Content:** The letter must be formal and structured into 7-8 SUBSTANTIAL paragraphs:
+                *   **Paragraph 1: Introduction (120-150 words):** Introduce the applicant, their full name, passport number, profession, and company. State the purpose of the letter (applying for an Iceland tourist visa for specific dates). Mention excitement about visiting Iceland.
+                
+                *   **Paragraph 2: About Iceland and Why Visit (200-250 words):** Express genuine interest in Iceland. Mention specific attractions like Reykjavik, Golden Circle, Blue Lagoon, Northern Lights, waterfalls, glaciers. Explain WHY you want to visit Iceland specifically (natural beauty, unique culture, safe country, etc.). Show you've researched Iceland.
+                
+                *   **Paragraph 3: Detailed Travel Plans (200-250 words):** Elaborate on travel dates, duration of stay, detailed itinerary. Mention which cities/regions you'll visit, what activities you plan (sightseeing, photography, nature exploration). Include accommodation plans, transportation arrangements. Be specific and organized.
+                
+                *   **Paragraph 4: Financial Capacity - Part 1 (180-200 words):** State that you will self-fund your entire trip. Mention your profession, monthly/annual income. Explain that you have sufficient savings to cover all costs (flights, accommodation, food, activities, insurance). Reference your bank balance ({applicant_data['bank_balance']}) and that bank statements are attached.
+                
+                *   **Paragraph 5: Financial Capacity - Part 2 (180-200 words):** Provide MORE financial details. Mention if you have multiple bank accounts. Talk about your financial stability over time. Mention that you understand trip costs and have budgeted accordingly. Reference any credit cards or additional financial resources. Emphasize you won't be a burden to Iceland.
+                
+                *   **Paragraph 6: Business/Job Ties (200-220 words):** Describe your job or business in detail. Explain your role, daily responsibilities, why you're important to the company/business. Mention that you have obligations and must return to resume work. Include specific details about your company, how long you've worked there, future projects/plans requiring your presence.
+                
+                *   **Paragraph 7: Family and Property Ties (200-220 words):** Elaborate on family members in Bangladesh (parents, spouse, children). Mention any property you own (house, land, apartments). Explain your emotional and financial connections to Bangladesh. Talk about family responsibilities, cultural ties, social connections. Make it clear you have STRONG reasons to return.
+                
+                *   **Paragraph 8: Conclusion (180-200 words):** Summarize key points: tourism purpose, self-funded, strong ties to Bangladesh, will return. Express gratitude for considering your application. Mention you're available for interview or additional documents. State you will respect all Schengen visa rules. End with respectful closing.
+
+            2.  **Tone and Language Rules:**
+                - Use simple, clear English (school-grade level - NOT overly formal or complex)
+                - Write like you're explaining to a person face-to-face
+                - Be confident but humble
+                - Sound genuine and honest (not robotic or template-like)
+                - Use first person ("I", "my", "I am")
+                - Avoid overly emotional language or begging
+                - Be professional but warm
+
             3.  **Output Format:** Structure your response as a JSON object with the following keys:
                 *   `"subject"`: A string for the subject line of the letter.
                 *   `"greeting"`: A string for the salutation (e.g., "Dear Visa Officer,").
-                *   `"body"`: An array of strings, where each string is a paragraph of the letter's body.
+                *   `"body"`: An array of strings, where each string is a paragraph of the letter's body. MUST have 7-8 paragraphs, each 180-250 words.
                 *   `"closing"`: A string for the closing remark (e.g., "Sincerely,").
                 *   `"signature"`: A string for the applicant's name.
 
@@ -282,11 +483,14 @@ class PDFGeneratorService:
               "subject": "Application for Schengen Tourist Visa to Iceland",
               "greeting": "Dear Sir or Madam,",
               "body": [
-                "Paragraph 1 text here...",
-                "Paragraph 2 text here...",
-                "Paragraph 3 text here...",
-                "Paragraph 4 text here...",
-                "Paragraph 5 text here..."
+                "Paragraph 1: Introduction (120-150 words)...",
+                "Paragraph 2: About Iceland (200-250 words)...",
+                "Paragraph 3: Travel Plans (200-250 words)...",
+                "Paragraph 4: Financial Part 1 (180-200 words)...",
+                "Paragraph 5: Financial Part 2 (180-200 words)...",
+                "Paragraph 6: Job Ties (200-220 words)...",
+                "Paragraph 7: Family Ties (200-220 words)...",
+                "Paragraph 8: Conclusion (180-200 words)..."
               ],
               "closing": "Yours faithfully,",
               "signature": "{applicant_data['name']}"
@@ -546,20 +750,32 @@ Bangladesh"""
         try:
             self._update_progress(doc_record, 10)
             
-            # Get all available data
-            name = self._get_value('passport_copy.full_name', 'nid_bangla.name_english', 'personal.full_name')
-            designation = self._get_value('employment.job_title', 'business.business_type', 'business.owner_title')
-            company = self._get_value('business.company_name', 'employment.company_name', 'business.business_name')
-            phone = self._get_value('personal.phone', 'contact.mobile', 'personal.mobile_number')
-            email = self._get_value('personal.email', 'contact.email', 'personal.email_address')
-            address = self._get_value('business.business_address', 'nid_bangla.address_bangla', 'personal.address')
-            website = self._get_value('business.website', 'employment.company_website')
+            # Get all available data with enhanced priority
+            name = self._get_value('full_name', 'passport_copy.full_name', 'nid_bangla.name_english')
+            designation = self._get_value('job_title', 'employment.job_title', 'business_type', 'business.owner_title')
+            company = self._get_value('company_name', 'business.company_name', 'employment.company_name')
+            phone = self._get_value('phone', 'contact.mobile', 'personal.mobile_number')
+            email = self._get_value('email', 'contact.email')
+            address = self._get_value('company_address', 'business.business_address', 'present_address')
             
-            # If designation not found, create from company name
-            if not designation and company:
-                designation = "CEO & Managing Director"
-            elif not designation:
-                designation = "Business Professional"
+            # Generate website from company name
+            website = self._get_value('business.website', 'employment.company_website')
+            if not website and company:
+                # Convert company name to domain: "MD Group" -> "mdgroup.com"
+                domain_name = company.lower().replace(' ', '').replace('-', '').replace('_', '')
+                website = f'www.{domain_name}.com'
+            elif not website:
+                website = 'www.company.com'
+            
+            # If designation not found, create from employment status
+            employment_status = self._get_value('employment_status')
+            if not designation:
+                if employment_status == 'Business Owner':
+                    designation = "CEO & Managing Director"
+                elif employment_status == 'Employed':
+                    designation = "Professional"
+                else:
+                    designation = "Business Professional"
             
             self._update_progress(doc_record, 40)
             
@@ -649,15 +865,25 @@ Bangladesh"""
         try:
             self._update_progress(doc_record, 10)
             
-            # Get financial data
-            name = self._get_value('passport_copy.full_name', 'nid_bangla.name_english', 'personal.full_name')
-            annual_income_y1 = self._get_value('income_tax_3years.year1_income', 'financial.annual_income')
-            annual_income_y2 = self._get_value('income_tax_3years.year2_income')
-            annual_income_y3 = self._get_value('income_tax_3years.year3_income')
-            monthly_income = self._get_value('financial.monthly_income')
-            monthly_expenses = self._get_value('financial.monthly_expenses')
-            bank_balance = self._get_value('bank_solvency.current_balance', 'bank_solvency.balance_amount', 'financial.total_savings')
-            funding_source = self._get_value('financial.trip_funding_source', 'financial.funding_source')
+            # Get financial data with enhanced priority
+            name = self._get_value('full_name', 'passport_copy.full_name', 'nid_bangla.name_english')
+            
+            # Get bank accounts from questionnaire
+            banks = self._get_banks()
+            total_balance = sum(float(bank.get('balance', 0)) for bank in banks) if banks else 0
+            
+            # Income data
+            monthly_income = self._get_value('monthly_income', 'financial.monthly_income')
+            monthly_expenses = self._get_value('monthly_expenses', 'financial.monthly_expenses')
+            annual_income = self._get_value('annual_income', 'income_tax_3years.annual_income', 'financial.annual_income')
+            
+            # Calculate values if missing
+            if not monthly_income and annual_income:
+                monthly_income = str(int(float(annual_income)) // 12)
+            if not annual_income and monthly_income:
+                annual_income = str(int(float(monthly_income)) * 12)
+            if not monthly_expenses and monthly_income:
+                monthly_expenses = str(int(float(monthly_income) * 0.6))  # Assume 60% expenses
             
             self._update_progress(doc_record, 40)
             
@@ -697,24 +923,64 @@ Bangladesh"""
             story.append(Paragraph(f"<b>Date:</b> {datetime.now().strftime('%B %d, %Y')}", body_style))
             story.append(Spacer(1, 0.3*inch))
             
-            # Annual Income Table
-            story.append(Paragraph("<b>1. Annual Income (Last 3 Years)</b>", body_style))
+            # Bank Accounts Section
+            story.append(Paragraph("<b>1. Bank Accounts</b>", body_style))
             story.append(Spacer(1, 0.1*inch))
             
+            if banks:
+                bank_data = [['Bank Name', 'Account Type', 'Account Number', 'Balance (BDT)']]
+                for bank in banks:
+                    balance_val = float(bank.get('balance', 0))
+                    bank_data.append([
+                        bank.get('bank_name', 'N/A'),
+                        bank.get('account_type', 'Savings'),
+                        bank.get('account_number', 'N/A'),
+                        f"{balance_val:,.0f}"
+                    ])
+                
+                # Add total row - use plain text, style will be applied via TableStyle
+                total_row = ['', '', 'Total Balance:', f'{total_balance:,.0f}']
+                bank_data.append(total_row)
+                
+                bank_table = Table(bank_data, colWidths=[2*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+                bank_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 10),
+                    ('FONT', (0, 1), (-1, -2), 'Helvetica', 9),
+                    ('FONT', (2, -1), (-1, -1), 'Helvetica-Bold', 10),  # Bold for total row
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('ALIGN', (3, 1), (3, -1), 'RIGHT'),
+                    ('PADDING', (0, 0), (-1, -1), 8),
+                    ('GRID', (0, 0), (-1, -2), 0.5, colors.grey),
+                    ('LINEABOVE', (2, -1), (-1, -1), 2, colors.black),
+                    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f0f0f0')),
+                ]))
+                story.append(bank_table)
+            else:
+                story.append(Paragraph("No bank account details available.", body_style))
+            
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Income Information
+            story.append(Paragraph("<b>2. Income Information</b>", body_style))
+            story.append(Spacer(1, 0.1*inch))
+            
+            annual_val = float(annual_income or 0)
+            monthly_val = float(monthly_income or 0)
             income_data = [
-                ['Year', 'Annual Income (BDT)'],
-                ['2023', annual_income_y1 or '-'],
-                ['2022', annual_income_y2 or '-'],
-                ['2021', annual_income_y3 or '-'],
+                ['Description', 'Amount (BDT)'],
+                ['Annual Income', f"{annual_val:,.0f}" if annual_income else '-'],
+                ['Monthly Income', f"{monthly_val:,.0f}" if monthly_income else '-'],
             ]
             
-            income_table = Table(income_data, colWidths=[2*inch, 3*inch])
+            income_table = Table(income_data, colWidths=[3*inch, 2*inch])
             income_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 11),
                 ('FONT', (0, 1), (-1, -1), 'Helvetica', 10),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
                 ('PADDING', (0, 0), (-1, -1), 10),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ]))
@@ -723,14 +989,17 @@ Bangladesh"""
             story.append(Spacer(1, 0.3*inch))
             
             # Monthly Finances
-            story.append(Paragraph("<b>2. Monthly Financial Overview</b>", body_style))
+            story.append(Paragraph("<b>3. Monthly Financial Overview</b>", body_style))
             story.append(Spacer(1, 0.1*inch))
             
+            monthly_inc = float(monthly_income or 0)
+            monthly_exp = float(monthly_expenses or 0)
+            savings = monthly_inc - monthly_exp if monthly_income and monthly_expenses else 0
             monthly_data = [
                 ['Description', 'Amount (BDT)'],
-                ['Monthly Income', monthly_income or '-'],
-                ['Monthly Expenses', monthly_expenses or '-'],
-                ['Monthly Savings', str(int(monthly_income or 0) - int(monthly_expenses or 0)) if monthly_income and monthly_expenses else '-'],
+                ['Monthly Income', f"{monthly_inc:,.0f}" if monthly_income else '-'],
+                ['Monthly Expenses', f"{monthly_exp:,.0f}" if monthly_expenses else '-'],
+                ['Monthly Savings', f"{savings:,.0f}" if savings > 0 else '-'],
             ]
             
             monthly_table = Table(monthly_data, colWidths=[3*inch, 2*inch])
@@ -747,12 +1016,9 @@ Bangladesh"""
             story.append(monthly_table)
             story.append(Spacer(1, 0.3*inch))
             
-            # Bank Balance
-            story.append(Paragraph(f"<b>3. Current Bank Balance:</b> BDT {bank_balance or 'N/A'}", body_style))
-            story.append(Spacer(1, 0.2*inch))
-            
             # Trip Funding
-            story.append(Paragraph(f"<b>4. Trip Funding Source:</b> {funding_source or 'Personal savings and income'}", body_style))
+            funding_source = self._get_value('funding_source', 'financial.trip_funding_source', 'financial.funding_source')
+            story.append(Paragraph(f"<b>4. Trip Funding Source:</b> {funding_source or 'Personal savings and income from employment/business'}", body_style))
             story.append(Spacer(1, 0.3*inch))
             
             # Declaration
@@ -791,15 +1057,17 @@ I understand that any false information may result in rejection of my visa appli
         try:
             self._update_progress(doc_record, 10)
             
-            # 1. Get travel data
+            # 1. Get travel data with enhanced priority
+            travel_activities = self._get_array('travel_activities')  # Day-by-day plan from questionnaire
+            
             applicant_data = {
-                "name": self._get_value('passport_copy.full_name', 'nid_bangla.name_english', 'personal.full_name'),
-                "passport": self._get_value('passport_copy.passport_number', 'personal.passport_number'),
-                "hotel": self._get_value('hotel.hotel_name', 'hotel_booking.hotel_name', 'travel_purpose.accommodation'),
-                "duration": self._get_value('travel.duration', 'hotel_booking.duration', 'travel_purpose.duration'),
-                "check_in": self._get_value('hotel.check_in_date', 'hotel_booking.check_in_date', 'travel.arrival_date'),
-                "places": self._get_value('travel.places_to_visit', 'travel_purpose.places_to_visit'),
-                "activities": self._get_value('travel.planned_activities', 'travel_purpose.planned_activities')
+                "name": self._get_value('full_name', 'passport_copy.full_name', 'nid_bangla.name_english'),
+                "passport": self._get_value('passport_number', 'passport_copy.passport_number'),
+                "hotel": self._get_value('accommodation_details', 'hotel.hotel_name', 'hotel_booking.hotel_name') or 'Hotel in Reykjavik',
+                "duration": self._get_value('duration_of_stay', 'travel.duration', 'hotel_booking.duration') or '7',
+                "check_in": self._get_value('arrival_date', 'hotel.check_in_date', 'hotel_booking.check_in_date') or datetime.now().strftime('%Y-%m-%d'),
+                "places": self._get_value('places_to_visit', 'travel.places_to_visit') or 'Reykjavik, Golden Circle, Blue Lagoon, South Coast',
+                "activities": self._get_value('planned_activities', 'travel.planned_activities') or 'Sightseeing, nature exploration, cultural experiences'
             }
             self._update_progress(doc_record, 20)
 
@@ -979,24 +1247,24 @@ I understand that any false information may result in rejection of my visa appli
     # ============================================================================
     
     def generate_travel_history(self) -> str:
-        """Generate previous travel history table"""
+        """Generate previous travel history table with user data"""
         doc_record = self._create_document_record("travel_history", "Travel_History.pdf")
         file_path = doc_record.file_path
         
         try:
             self._update_progress(doc_record, 10)
             
-            # Get visa history data
-            visa_history = self.extracted_data.get('visa_history', {})
-            previous_travels = visa_history.get('previous_travels', [])
+            # Get applicant info first
+            name = self._get_value('full_name', 'passport_copy.full_name', 'nid_bangla.name_english')
+            passport = self._get_value('passport_number', 'passport_copy.passport_number')
             
-            # If no extracted data, try questionnaire
+            # Get travel history from questionnaire (priority)
+            previous_travels = self._get_previous_travels()
+            
+            # If no questionnaire data, try extraction
             if not previous_travels:
-                travel_countries = self._get_value('travel_history.countries_visited')
-                if travel_countries:
-                    # Parse from questionnaire
-                    countries = [c.strip() for c in travel_countries.split(',')]
-                    previous_travels = [{'country': c, 'year': '2020-2023'} for c in countries]
+                visa_history = self.extracted_data.get('visa_history', {})
+                previous_travels = visa_history.get('previous_travels', [])
             
             self._update_progress(doc_record, 40)
             
@@ -1014,53 +1282,61 @@ I understand that any false information may result in rejection of my visa appli
                 parent=styles['Heading1'],
                 fontSize=16,
                 textColor=colors.HexColor('#1a1a1a'),
-                spaceAfter=30,
+                spaceAfter=20,
                 alignment=TA_CENTER,
                 fontName='Helvetica-Bold'
             )
             
             story.append(Spacer(1, 0.3*inch))
             story.append(Paragraph("PREVIOUS TRAVEL HISTORY", title_style))
-            story.append(Spacer(1, 0.3*inch))
+            story.append(Spacer(1, 0.2*inch))
             
-            # Applicant info
-            body_style = ParagraphStyle(
-                'Body',
+            # Applicant info (Name and Passport)
+            info_style = ParagraphStyle(
+                'Info',
                 parent=styles['BodyText'],
                 fontSize=11,
-                fontName='Helvetica'
+                fontName='Helvetica',
+                spaceAfter=6
             )
             
-            name = self._get_value('personal.full_name')
-            story.append(Paragraph(f"<b>Applicant Name:</b> {name}", body_style))
+            story.append(Paragraph(f"<b>Name:</b> {name}", info_style))
+            story.append(Paragraph(f"<b>Passport No:</b> {passport}", info_style))
             story.append(Spacer(1, 0.3*inch))
             
             # Travel history table
-            table_data = [['SL NO', 'Entry Date', 'Exit Date', 'Type of Visa', 'Visit Country']]
+            table_data = [['SL NO', 'Country', 'Year', 'Duration (Days)', 'Type of Visa']]
             
             if previous_travels:
                 for i, travel in enumerate(previous_travels, 1):
+                    # Use data from questionnaire array
+                    country = travel.get('country', 'N/A')
+                    year = travel.get('year', 'N/A')
+                    duration = travel.get('duration_days', 'N/A')
+                    visa_type = 'Tourism'  # Always tourism as requested
+                    
                     table_data.append([
                         str(i),
-                        travel.get('entry_date', 'N/A'),
-                        travel.get('exit_date', 'N/A'),
-                        travel.get('visa_type', 'Tourist'),
-                        travel.get('country', 'N/A')
+                        country,
+                        str(year),
+                        str(duration),
+                        visa_type
                     ])
             else:
                 # Default entry if no data
                 table_data.append(['1', 'N/A', 'N/A', 'N/A', 'No previous international travel'])
             
-            travel_table = Table(table_data, colWidths=[0.6*inch, 1.3*inch, 1.3*inch, 1.3*inch, 1.8*inch])
+            travel_table = Table(table_data, colWidths=[0.6*inch, 1.8*inch, 0.8*inch, 1.2*inch, 1.5*inch])
             travel_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 10),
-                ('FONT', (0, 1), (-1, -1), 'Helvetica', 9),
+                ('FONT', (0, 1), (-1, -1), 'Helvetica', 10),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('PADDING', (0, 0), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('PADDING', (0, 0), (-1, -1), 10),
+                ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+                ('BOX', (0, 0), (-1, -1), 2, colors.black),
             ]))
             
             story.append(travel_table)
@@ -1105,9 +1381,9 @@ I understand that any false information may result in rejection of my visa appli
             
             self._update_progress(doc_record, 30)
             
-            # Generate AI content - COMPREHENSIVE 1 full page
+            # Generate AI content - OPTIMIZED: 1.5-2 pages (NOT 3 pages, NOT less than 1.5)
             prompt = f"""
-Write a comprehensive home ties statement (800-1000 words, fills 1 full page) in simple, school-grade English:
+Write a home ties statement in simple, school-grade English. Target length: 950-1200 words to fill 1.5-2 pages (NOT more than 2 pages, NOT less than 1.5 pages).
 
 My information:
 - Name: {name}
@@ -1119,23 +1395,40 @@ My information:
 - Property: {property_info}
 - Why I will return: {reasons}
 
-IMPORTANT RULES:
-- Write 2-3 SUBSTANTIAL paragraphs (each 6-10 sentences)
-- Use SIMPLE, clear English (like talking to a visa officer in person)
+CRITICAL REQUIREMENTS:
+- Length: 950-1200 words EXACTLY (1.5-2 pages)
+- Write 4-5 SHORT, FOCUSED paragraphs (each 200-280 words)
+- Use SIMPLE, clear English (10th grade reading level)
 - NO markdown formatting (no **, no *, no #)
-- Sound natural and human, not robotic
-- Total length should fill 1 full page (800-1000 words minimum)
+- Add paragraph breaks for readability - NOT continuous dense text
+- Sound natural and human, like talking to a visa officer
 
-PARAGRAPH 1 (Family and Home): 
-Explain your family ties - mention father, mother, other family members. Talk about where you live, your family home, childhood, and emotional connections to your hometown/city. Make it personal and detailed.
+PARAGRAPH 1 (Family Ties - 220-250 words): 
+Start with "My name is {name}..." Explain your family ties - father, mother, siblings, spouse, children. Where you live, your family home, emotional connections. Be specific about family members and why they're important. Keep sentences short and clear.
 
-PARAGRAPH 2 (Employment/Business and Property):
-Describe your job or business in detail. Explain your role, responsibilities, why it's important. Mention any property you own (house, land, etc.) and its significance to you. Talk about your financial stability and commitments.
+PARAGRAPH 2 (Employment/Business - 220-250 words):
+Describe your job or business. Your role, daily responsibilities, why you're needed. How long you've worked there. Future projects or plans. Be specific but don't overexplain. Short, clear sentences.
 
-PARAGRAPH 3 (Reasons to Return):
-Clearly explain multiple reasons why you MUST return to Bangladesh. Include family obligations, business/job responsibilities, property management, cultural ties, future plans in Bangladesh. Be specific and convincing.
+PARAGRAPH 3 (Property and Financial Ties - 200-240 words):
+Mention property you own (house, land, apartments). Talk about financial commitments, investments, bank accounts. Explain why these tie you to Bangladesh. Keep it factual and brief.
 
-Write in simple, flowing English. Make it sound genuine and heartfelt, not like a template.
+PARAGRAPH 4 (Cultural and Social Ties - 180-220 words):
+Discuss cultural connections, community involvement, religious ties, social circles. Mention friends, social responsibilities, community roles. Why Bangladesh is your home beyond just family/work.
+
+PARAGRAPH 5 (Conclusion - 180-220 words):
+Summarize ALL reasons you MUST return: family obligations, job/business responsibilities, property management, cultural ties, future plans. Be clear and convincing. End with commitment to return after travel.
+
+WRITING STYLE RULES:
+- Use short sentences (10-18 words average)
+- Add line breaks between paragraphs
+- Be conversational but professional
+- Use "I", "my", "I am" (first person)
+- Sound genuine, not robotic
+- Be specific with names, places, numbers
+- Don't repeat yourself
+- Don't use complex vocabulary
+
+Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exactly)
 """
             
             statement_content = self._generate_content_with_ai(prompt)
@@ -1221,19 +1514,34 @@ Write in simple, flowing English. Make it sound genuine and heartfelt, not like 
         try:
             self._update_progress(doc_record, 10)
             
-            # Collect ALL asset data
-            name = self._get_value('personal.full_name', 'passport_copy.full_name', 'bank_solvency.account_holder_name')
-            father_name = self._get_value('bank_solvency.father_name', 'personal.father_name', 'nid_bangla.father_name_bangla')
-            nid = self._get_value('nid_bangla.nid_number', 'personal.nid_number')
-            address = self._get_value('personal.address', 'nid_bangla.address_bangla', 'bank_solvency.current_address')
-            phone = self._get_value('personal.phone', 'personal.mobile_number')
+            # Collect ALL asset data with enhanced priority
+            name = self._get_value('full_name', 'passport_copy.full_name', 'bank_solvency.account_holder_name')
+            father_name = self._get_value('father_name', 'bank_solvency.father_name', 'nid_bangla.father_name_bangla')
+            nid = self._get_value('nid_number', 'nid_bangla.nid_number')
+            address = self._get_value('permanent_address', 'present_address', 'nid_bangla.address_bangla')
+            phone = self._get_value('phone', 'personal.mobile_number')
             
-            # Property assets
-            property_value = self._get_value('assets.property_value', 'asset_valuation.property_value') or '13623000'
-            vehicle_value = self._get_value('assets.vehicle_value') or '3500000'
-            business_value = self._get_value('business.business_value') or '10250000'
-            business_name = self._get_value('business.company_name', 'business.business_name', 'employment.company_name')
-            business_type = self._get_value('business.business_type') or 'Proprietor'
+            # Get assets array from questionnaire
+            assets = self._get_assets()
+            
+            # Calculate total asset value from array
+            total_asset_value = sum(float(asset.get('estimated_value', 0)) for asset in assets) if assets else 0
+            
+            # Extract specific asset types
+            property_assets = [a for a in assets if a.get('asset_type') == 'Property']
+            vehicle_assets = [a for a in assets if a.get('asset_type') == 'Vehicle']
+            business_assets = [a for a in assets if a.get('asset_type') == 'Business']
+            
+            # Property values (use first 3 properties or auto-filled)
+            property_value = str(int(property_assets[0].get('estimated_value', 0))) if property_assets else self._get_value('assets.property_value') or '13623000'
+            flat_value_2 = str(int(property_assets[1].get('estimated_value', 0))) if len(property_assets) > 1 else str(int(float(property_value) * 0.7))
+            flat_value_3 = str(int(property_assets[2].get('estimated_value', 0))) if len(property_assets) > 2 else str(int(float(property_value) * 0.5))
+            
+            vehicle_value = str(int(vehicle_assets[0].get('estimated_value', 0))) if vehicle_assets else self._get_value('assets.vehicle_value') or '3500000'
+            business_value = str(int(business_assets[0].get('estimated_value', 0))) if business_assets else self._get_value('business.business_value') or '10250000'
+            
+            business_name = self._get_value('company_name', 'business.company_name', 'employment.company_name')
+            business_type = self._get_value('business_type', 'employment_status') or 'Business Owner'
             
             self._update_progress(doc_record, 30)
             
@@ -1245,8 +1553,8 @@ Write in simple, flowing English. Make it sound genuine and heartfelt, not like 
                 
                 # Asset values - will be distributed across 3 flats in template
                 'flat_value_1': property_value,
-                'flat_value_2': str(int(float(str(property_value).replace(',', ''))) // 2) if property_value else '14500000',
-                'flat_value_3': str(int(float(str(property_value).replace(',', ''))) // 3) if property_value else '12000000',
+                'flat_value_2': flat_value_2,
+                'flat_value_3': flat_value_3,
                 'car_value': vehicle_value,
                 'business_value': business_value,
                 
@@ -1629,7 +1937,7 @@ under the law."""
             
             # Tax details table
             tax_data = [
-                ['<b>Particulars</b>', '<b>Details</b>'],
+                ['Particulars', 'Details'],
                 ['Taxpayer Name', name],
                 ['TIN Number', tin],
                 ['Assessment Year', assessment_year],
@@ -1659,12 +1967,11 @@ and is issued for official purposes including visa applications, loan applicatio
             story.append(Paragraph(validity, body_style))
             story.append(Spacer(1, 0.5*inch))
             
-            # Signature section
+            # Signature section - empty space for seal as requested
             sig_text = """<b>Authorized Officer</b><br/>
 Deputy Commissioner of Taxes<br/>
 National Board of Revenue<br/>
-Dhaka, Bangladesh<br/><br/>
-[OFFICIAL SEAL]"""
+Dhaka, Bangladesh"""
             
             story.append(Paragraph(sig_text, body_style))
             
