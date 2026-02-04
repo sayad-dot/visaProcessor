@@ -203,40 +203,76 @@ class PDFService:
             
             logger.info(f"🤖 Starting high-quality OCR on: {os.path.basename(file_path)}")
             
-            # Convert PDF to images with VERY HIGH DPI for best accuracy
-            images = convert_from_path(
-                file_path, 
-                dpi=400,  # ← INCREASED from 300 to 400 for better quality
-                fmt='jpeg',
-                grayscale=True,  # ← Convert to grayscale for better OCR
-                size=(None, None)  # Keep original size
-            )
+            # Check file size first
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+            logger.info(f"📦 PDF file size: {file_size_mb:.2f} MB")
             
-            logger.info(f"📸 Converted PDF to {len(images)} image(s) at 400 DPI")
+            # Limit OCR for very large files
+            MAX_FILE_SIZE_MB = 5  # Limit OCR to 5MB files
+            if file_size_mb > MAX_FILE_SIZE_MB:
+                logger.warning(f"⚠️ File too large for OCR ({file_size_mb:.2f} MB > {MAX_FILE_SIZE_MB} MB). Skipping OCR.")
+                return f"[File too large for OCR processing: {file_size_mb:.2f} MB. Please use smaller files or pre-processed text PDFs.]"
+            
+            # Get page count first without loading all pages
+            with open(file_path, 'rb') as f:
+                pdf_reader = PyPDF2.PdfReader(f)
+                total_pages = len(pdf_reader.pages)
+            
+            # Limit number of pages to process
+            MAX_PAGES = 10
+            if total_pages > MAX_PAGES:
+                logger.warning(f"⚠️ PDF has {total_pages} pages. Processing only first {MAX_PAGES} pages to prevent memory issues.")
+                total_pages = MAX_PAGES
+            
+            logger.info(f"🤖 Starting memory-efficient OCR on {total_pages} page(s)")
             
             text = ""
             
-            # OCR each page with enhanced configuration
-            for i, image in enumerate(images):
-                logger.info(f"🔍 OCR processing page {i+1}/{len(images)}...")
-                
+            # Process pages ONE AT A TIME to manage memory
+            for page_num in range(total_pages):
                 try:
-                    # Use both English and Bengali for Bangladesh documents
-                    # Tesseract languages: eng (English), ben (Bengali)
-                    # --psm 1 = Automatic page segmentation with OSD (best for documents)
-                    # --oem 3 = Default OCR Engine (LSTM)
-                    page_text = pytesseract.image_to_string(
-                        image, 
-                        lang='eng+ben',  # Multi-language support
-                        config='--psm 1 --oem 3'  # ← CHANGED from psm 3 to psm 1 for better document handling
+                    logger.info(f"🔍 OCR processing page {page_num+1}/{total_pages}...")
+                    
+                    # Convert SINGLE page to image (memory efficient)
+                    images = convert_from_path(
+                        file_path,
+                        first_page=page_num + 1,
+                        last_page=page_num + 1,
+                        dpi=200,  # REDUCED from 400 to 200 (75% less memory)
+                        fmt='jpeg',
+                        grayscale=True
                     )
                     
-                    text += f"\n--- Page {i+1} ---\n{page_text}"
-                    logger.info(f"📝 Page {i+1}: Extracted {len(page_text)} characters")
+                    if not images:
+                        logger.warning(f"⚠️ No image generated for page {page_num+1}")
+                        continue
+                    
+                    image = images[0]
+            
+                    # OCR the single page
+                    try:
+                        # Use English only for better reliability
+                        # --psm 3 = Automatic page segmentation (more reliable than psm 1)
+                        # --oem 3 = Default OCR Engine
+                        page_text = pytesseract.image_to_string(
+                            image,
+                            lang='eng',  # English only (more stable than eng+ben)
+                            config='--psm 3 --oem 3'
+                        )
+                        
+                        text += f"\n--- Page {page_num+1} ---\n{page_text}"
+                        logger.info(f"📝 Page {page_num+1}: Extracted {len(page_text)} characters")
+                        
+                    except Exception as ocr_error:
+                        logger.error(f"❌ OCR error on page {page_num+1}: {str(ocr_error)}")
+                        text += f"\n--- Page {page_num+1} ---\n[OCR failed: {str(ocr_error)}]\n"
+                    
+                    # Clean up memory after each page
+                    del images
+                    del image
                     
                 except Exception as page_error:
-                    logger.error(f"❌ Error on page {i+1}: {str(page_error)}")
-                    # Continue with other pages
+                    logger.error(f"❌ Error processing page {page_num+1}: {str(page_error)}")
                     continue
             
             text_clean = text.strip()
