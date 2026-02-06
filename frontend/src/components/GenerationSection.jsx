@@ -66,7 +66,7 @@ const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
     { key: 'financial_statement', name: 'Financial Statement', category: 'generated' },
   ];
 
-  // Document type display names for generation (ALL 13 AI-generatable documents)
+  // Document type display names for generation (ALL AI-generatable documents)
   const docTypeNames = {
     cover_letter: 'Cover Letter',
     nid_english: 'NID English Translation',
@@ -79,6 +79,8 @@ const GenerationSection = ({ applicationId, applicantName = 'Applicant' }) => {
     tin_certificate: 'TIN Certificate',
     tax_certificate: 'Tax Certificate',
     trade_license: 'Trade License',
+    job_noc: 'Job NOC',
+    job_id_card: 'Employee ID Card',
     hotel_booking: 'Hotel Booking',
     air_ticket: 'Air Ticket'
   };
