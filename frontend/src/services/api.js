@@ -34,7 +34,7 @@ api.interceptors.response.use(
     // This will show in addition to the specific error messages in components
     setTimeout(() => {
       toast.error('⚠️ Storage limit capacity exceeded. Service temporarily unavailable.', {
-        position: 'top-center',
+        position: 'top-right',
         autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
