@@ -30,14 +30,14 @@ DELETE FROM required_documents;
 
 -- Step 6: Insert correct document requirements
 
--- Business: 14 documents (2 required, 12 optional)
+-- Business: 13 documents (2 required, 11 optional)
 INSERT INTO required_documents 
 (country, visa_type, application_type, document_type, is_mandatory, can_be_generated, description)
 VALUES
 -- REQUIRED (2 docs)
 ('Iceland', 'Tourist', 'business', 'passport_copy', true, false, 'Passport copy - PDF'),
 ('Iceland', 'Tourist', 'business', 'nid_bangla', true, true, 'NID Bangla (will be translated to English)'),
--- OPTIONAL (12 docs)
+-- OPTIONAL (11 docs)
 ('Iceland', 'Tourist', 'business', 'visa_history', false, false, 'Visa history copies - PDF'),
 ('Iceland', 'Tourist', 'business', 'nid_english', false, true, 'NID English translated copy - PDF'),
 ('Iceland', 'Tourist', 'business', 'trade_license', false, false, 'Trade license English translated - PDF'),
@@ -48,17 +48,16 @@ VALUES
 ('Iceland', 'Tourist', 'business', 'travel_itinerary', false, true, 'Travel itinerary - PDF'),
 ('Iceland', 'Tourist', 'business', 'travel_history', false, true, 'Travel History - PDF'),
 ('Iceland', 'Tourist', 'business', 'air_ticket', false, false, 'Air ticket Booking - PDF'),
-('Iceland', 'Tourist', 'business', 'hotel_booking', false, false, 'Hotel Booking - PDF'),
-('Iceland', 'Tourist', 'business', 'bank_statement', false, false, 'Bank statement - PDF');
+('Iceland', 'Tourist', 'business', 'hotel_booking', false, false, 'Hotel Booking - PDF');
 
--- Job: 15 documents (2 required, 13 optional)
+-- Job: 14 documents (2 required, 12 optional)
 INSERT INTO required_documents 
 (country, visa_type, application_type, document_type, is_mandatory, can_be_generated, description)
 VALUES
 -- REQUIRED (2 docs)
 ('Iceland', 'Tourist', 'job', 'passport_copy', true, false, 'Passport copy - PDF'),
 ('Iceland', 'Tourist', 'job', 'nid_bangla', true, true, 'NID Bangla (will be translated to English)'),
--- OPTIONAL (13 docs)
+-- OPTIONAL (12 docs)
 ('Iceland', 'Tourist', 'job', 'visa_history', false, false, 'Visa history copies - PDF'),
 ('Iceland', 'Tourist', 'job', 'nid_english', false, true, 'NID English translated copy - PDF'),
 ('Iceland', 'Tourist', 'job', 'job_noc', false, false, 'JOB NOC (No Objection Certificate) - PDF'),
@@ -70,8 +69,7 @@ VALUES
 ('Iceland', 'Tourist', 'job', 'travel_itinerary', false, true, 'Travel itinerary - PDF'),
 ('Iceland', 'Tourist', 'job', 'travel_history', false, true, 'Travel History - PDF'),
 ('Iceland', 'Tourist', 'job', 'air_ticket', false, false, 'Air ticket Booking - PDF'),
-('Iceland', 'Tourist', 'job', 'hotel_booking', false, false, 'Hotel Booking - PDF'),
-('Iceland', 'Tourist', 'job', 'bank_statement', false, false, 'Bank statement - PDF');
+('Iceland', 'Tourist', 'job', 'hotel_booking', false, false, 'Hotel Booking - PDF');
 
 -- Step 7: Verify the migration
 SELECT 
@@ -85,5 +83,5 @@ GROUP BY application_type
 ORDER BY application_type;
 
 -- Expected result:
--- business: 14 total (2 required, 12 optional)
--- job: 15 total (2 required, 13 optional)
+-- business: 13 total (2 required, 11 optional)
+-- job: 14 total (2 required, 12 optional)

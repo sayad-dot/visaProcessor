@@ -16,12 +16,12 @@ def seed_documents():
     
     # Format: (country, visa_type, app_type, doc_type, is_mandatory, can_be_generated, description)
     
-    # Business: 14 documents (2 required, 12 optional)
+    # Business: 13 documents (2 required, 11 optional)
     business_docs = [
         # REQUIRED (2 docs) - only these 2 should be marked required
         ('Iceland', 'Tourist', 'business', 'passport_copy', True, False, 'Passport copy - PDF'),
         ('Iceland', 'Tourist', 'business', 'nid_bangla', True, True, 'NID Bangla (will be translated to English)'),
-        # OPTIONAL/SUGGESTED (12 docs) - rest are optional
+        # OPTIONAL/SUGGESTED (11 docs) - rest are optional
         ('Iceland', 'Tourist', 'business', 'visa_history', False, False, 'Visa history copies - PDF'),
         ('Iceland', 'Tourist', 'business', 'nid_english', False, True, 'NID English translated copy - PDF'),
         ('Iceland', 'Tourist', 'business', 'trade_license', False, False, 'Trade license English translated - PDF'),
@@ -33,7 +33,6 @@ def seed_documents():
         ('Iceland', 'Tourist', 'business', 'travel_history', False, True, 'Travel History - PDF'),
         ('Iceland', 'Tourist', 'business', 'air_ticket', False, False, 'Air ticket Booking - PDF'),
         ('Iceland', 'Tourist', 'business', 'hotel_booking', False, False, 'Hotel Booking - PDF'),
-        ('Iceland', 'Tourist', 'business', 'bank_statement', False, False, 'Bank statement - PDF'),
     ]
     
     # Job: 14 documents (2 required, 12 optional)
@@ -54,7 +53,6 @@ def seed_documents():
         ('Iceland', 'Tourist', 'job', 'travel_history', False, True, 'Travel History - PDF'),
         ('Iceland', 'Tourist', 'job', 'air_ticket', False, False, 'Air ticket Booking - PDF'),
         ('Iceland', 'Tourist', 'job', 'hotel_booking', False, False, 'Hotel Booking - PDF'),
-        ('Iceland', 'Tourist', 'job', 'bank_statement', False, False, 'Bank statement - PDF'),
     ]
     
     with engine.connect() as conn:
