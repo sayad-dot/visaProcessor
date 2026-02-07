@@ -54,8 +54,8 @@ const ApplicationDetailsPage = () => {
       const appData = await applicationService.getApplication(id)
       setApplication(appData)
       
-      // Fetch required documents for Iceland tourist visa
-      const reqDocs = await documentService.getRequiredDocuments('iceland', 'tourist')
+      // Fetch required documents for this specific application (includes application_type filtering)
+      const reqDocs = await applicationService.getRequiredDocuments(id)
       setRequiredDocuments(reqDocs)
       
       // Fetch uploaded documents

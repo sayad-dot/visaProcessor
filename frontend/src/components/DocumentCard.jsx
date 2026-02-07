@@ -61,8 +61,8 @@ const DocumentCard = ({
         bgColor: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
         borderColor: '#2196f3'
       };
-    } else if (requiredDocument?.is_mandatory && !requiredDocument?.can_be_generated) {
-      // Only 3 docs are truly required: passport, nid, bank statement
+    } else if (requiredDocument?.is_mandatory) {
+      // Required documents: passport_copy and nid_bangla (both marked as is_mandatory=true)
       return {
         icon: <ErrorIcon />,
         color: 'error',
@@ -235,7 +235,7 @@ const DocumentCard = ({
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
             <Button
               variant="contained"
-              color={(requiredDocument?.is_mandatory && !requiredDocument?.can_be_generated) ? "error" : "primary"}
+              color={requiredDocument?.is_mandatory ? "error" : "primary"}
               size="large"
               startIcon={<CloudUploadIcon />}
               onClick={() => onUpload && onUpload(documentType)}

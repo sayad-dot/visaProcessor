@@ -17,6 +17,12 @@ class Country(str, Enum):
     ICELAND = "Iceland"
 
 
+class ApplicationType(str, Enum):
+    """Application type - Business or Job"""
+    BUSINESS = "business"
+    JOB = "job"
+
+
 class ApplicationStatus(str, Enum):
     """Application status"""
     DRAFT = "DRAFT"
@@ -58,6 +64,7 @@ class ApplicationCreate(BaseModel):
     applicant_phone: Optional[str] = None
     country: Country = Country.ICELAND
     visa_type: VisaType = VisaType.TOURIST
+    application_type: ApplicationType = ApplicationType.BUSINESS
 
 
 class DocumentUploadResponse(BaseModel):
@@ -89,6 +96,7 @@ class RequiredDocumentResponse(BaseModel):
     id: int
     country: str
     visa_type: str
+    application_type: str
     document_type: str
     description: Optional[str]
     is_mandatory: bool
@@ -136,17 +144,6 @@ class ApplicationDetailResponse(ApplicationResponse):
     """Detailed application response with extracted data"""
     extracted_data: Dict[str, Any] = {}
     missing_info: List[str] = []
-
-
-class RequiredDocumentResponse(BaseModel):
-    """Required document information"""
-    document_type: str
-    description: str
-    is_mandatory: bool
-    can_be_generated: bool
-    
-    class Config:
-        from_attributes = True
 
 
 class HealthResponse(BaseModel):

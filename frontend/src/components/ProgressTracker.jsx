@@ -29,36 +29,33 @@ const ProgressTracker = ({
   uploadedDocuments = [],
   showDetails = true
 }) => {
-  // Document type categorization
-  const MANDATORY_TYPES = ['passport_copy', 'nid_bangla', 'bank_solvency'];
-  const OPTIONAL_TYPES = [
-    'visa_history', 'tin_certificate', 'income_tax_3years', 'hotel_booking',
-    'air_ticket', 'trade_license', 'savings_account_statement', 'savings_account_solvency',
-    'current_account_statement', 'current_account_solvency', 'asset_valuation',
-    'nid_english', 'visiting_card'
-  ];
+  // Get mandatory and optional document counts from requiredDocuments
+  const mandatoryDocs = requiredDocuments.filter(doc => doc.is_mandatory === true);
+  const optionalDocs = requiredDocuments.filter(doc => doc.is_mandatory === false);
+  const aiGeneratableDocs = requiredDocuments.filter(doc => doc.can_be_generated === true);
+  
+  const mandatoryCount = mandatoryDocs.length; // Should be 2 (passport_copy, nid_bangla)
+  const optionalMaxCount = optionalDocs.length; // Should be 12 for business, 13 for job
+  const totalDocuments = requiredDocuments.length; // Should be 14 for business, 15 for job
   
   // Count uploaded documents by category
   const uploadedTypes = Array.isArray(uploadedDocuments) 
     ? uploadedDocuments.map(doc => doc.document_type?.toLowerCase() || '')
     : [];
   
-  // Mandatory: 3 required
-  const mandatoryCount = 3;
-  const mandatoryUploaded = MANDATORY_TYPES.filter(type => 
-    uploadedTypes.includes(type)
+  // Count uploaded mandatory documents
+  const mandatoryUploaded = mandatoryDocs.filter(doc => 
+    uploadedTypes.includes(doc.document_type?.toLowerCase() || '')
   ).length;
   
-  // Optional: rest of uploads that aren't mandatory
-  const optionalMaxCount = 13;
-  const optionalUploaded = uploadedTypes.filter(type => 
-    !MANDATORY_TYPES.includes(type)
+  // Count uploaded optional documents
+  const optionalUploaded = optionalDocs.filter(doc => 
+    uploadedTypes.includes(doc.document_type?.toLowerCase() || '')
   ).length;
   
-  // Total documents for visa = 16
-  const totalDocuments = 16;
-  const totalUploaded = mandatoryUploaded + optionalUploaded;
-  const willGenerate = totalDocuments - totalUploaded;
+  // Total uploaded and AI to generate
+  const totalUploaded = uploadedDocuments.length;
+  const willGenerate = Math.max(0, totalDocuments - totalUploaded);
   
   // Progress percentage for mandatory documents
   const mandatoryProgress = (mandatoryUploaded / mandatoryCount) * 100;
@@ -118,7 +115,7 @@ const ProgressTracker = ({
                   Required Documents
                 </Typography>
                 <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                  Passport, NID, Bank Solvency
+                  {mandatoryDocs.length === 2 ? 'Passport, NID Bangla' : 'Passport, NID, Bank Solvency'}
                 </Typography>
               </Box>
             </Box>
@@ -152,7 +149,7 @@ const ProgressTracker = ({
                   Optional Documents
                 </Typography>
                 <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                  TIN, Tax, Hotel, Air Ticket, etc.
+                  {optionalMaxCount} documents (upload what you have)
                 </Typography>
               </Box>
             </Box>
@@ -187,7 +184,7 @@ const ProgressTracker = ({
                   AI Will Generate
                 </Typography>
                 <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                  Cover Letter, Itinerary, Statements
+                  AI creates remaining {aiGeneratableDocs.length} docs from your data
                 </Typography>
               </Box>
             </Box>

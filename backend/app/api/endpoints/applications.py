@@ -39,6 +39,7 @@ async def create_application(
             applicant_phone=application.applicant_phone,
             country=application.country.value,
             visa_type=application.visa_type.value,
+            application_type=application.application_type.value,  # NEW: Store application type
             status=DBApplicationStatus.DRAFT
         )
         
@@ -130,7 +131,7 @@ async def get_required_documents(
     db: Session = Depends(get_db)
 ):
     """
-    Get list of required documents for an application
+    Get list of required documents for an application (considering application_type)
     """
     application = db.query(VisaApplication).filter(
         VisaApplication.id == application_id
@@ -142,10 +143,11 @@ async def get_required_documents(
             detail="Application not found"
         )
     
-    # Get required documents for this country and visa type
+    # Get required documents for this country, visa type AND application type
     required_docs = db.query(RequiredDocument).filter(
         RequiredDocument.country == application.country,
-        RequiredDocument.visa_type == application.visa_type
+        RequiredDocument.visa_type == application.visa_type,
+        RequiredDocument.application_type == application.application_type
     ).all()
     
     return required_docs

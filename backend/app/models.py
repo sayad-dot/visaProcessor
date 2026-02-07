@@ -20,8 +20,14 @@ class ApplicationStatus(str, enum.Enum):
     FAILED = "FAILED"
 
 
+class ApplicationType(str, enum.Enum):
+    """Type of visa application (Business or Job)"""
+    BUSINESS = "business"
+    JOB = "job"
+
+
 class DocumentType(str, enum.Enum):
-    """Types of documents in the system - ALL 21 types supported"""
+    """Types of documents in the system - ALL document types supported"""
     
     # ===== MANDATORY USER DOCUMENTS (2) =====
     PASSPORT_COPY = "passport_copy"  # REQUIRED
@@ -51,6 +57,12 @@ class DocumentType(str, enum.Enum):
     TRADE_LICENSE = "trade_license"  # Generated Trade License
     HOTEL_BOOKING_GENERATED = "hotel_booking_generated"  # Generated booking
     AIR_TICKET_GENERATED = "air_ticket_generated"  # Generated e-ticket
+    
+    # ===== JOB-SPECIFIC DOCUMENTS (4 - NEW) =====
+    JOB_NOC = "job_noc"  # Generated Job No Objection Certificate
+    JOB_ID_CARD = "job_id_card"  # Generated Employee ID Card  
+    PAYSLIP = "payslip"  # Job holder's payslips (last 6 months)
+    BANK_STATEMENT = "bank_statement"  # Bank statement
 
 
 class VisaApplication(Base):
@@ -68,6 +80,11 @@ class VisaApplication(Base):
     # Visa details
     country = Column(String(100), nullable=False, default="Iceland")
     visa_type = Column(String(100), nullable=False, default="Tourist")
+    application_type = Column(
+        Enum(ApplicationType, values_callable=lambda obj: [e.value for e in obj]),
+        default=ApplicationType.BUSINESS,
+        nullable=False
+    )
     
     # Application status
     status = Column(Enum(ApplicationStatus, values_callable=lambda obj: [e.value for e in obj]), default=ApplicationStatus.DRAFT)
@@ -153,12 +170,17 @@ class AIInteraction(Base):
 
 
 class RequiredDocument(Base):
-    """Master list of required documents per country/visa type"""
+    """Master list of required documents per country/visa type/application type"""
     __tablename__ = "required_documents"
     
     id = Column(Integer, primary_key=True, index=True)
     country = Column(String(100), nullable=False)
     visa_type = Column(String(100), nullable=False)
+    application_type = Column(
+        Enum(ApplicationType, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+        default=ApplicationType.BUSINESS
+    )
     document_type = Column(Enum(DocumentType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     
     # Document metadata
@@ -170,7 +192,7 @@ class RequiredDocument(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     def __repr__(self):
-        return f"<RequiredDocument {self.country} - {self.visa_type} - {self.document_type}>"
+        return f"<RequiredDocument {self.country} - {self.visa_type} - {self.application_type} - {self.document_type}>"
 
 
 class ExtractedData(Base):
