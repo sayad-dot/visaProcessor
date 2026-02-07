@@ -225,6 +225,44 @@ SMART_QUESTIONNAIRE_STRUCTURE = {
                 "required": False,
                 "level": "optional",
                 "placeholder": "https://www.company.com"
+            },
+            {
+                "key": "employee_id",
+                "label": "Employee ID Number",
+                "type": "text",
+                "required": False,
+                "level": "optional",
+                "placeholder": "EMP12345",
+                "show_if": {"employment_status": "Employed (Job Holder)"},
+                "hint": "Your official employee ID from your company"
+            },
+            {
+                "key": "joining_date",
+                "label": "Date of Joining Company",
+                "type": "date",
+                "required": False,
+                "level": "optional",
+                "show_if": {"employment_status": "Employed (Job Holder)"},
+                "hint": "When did you start working at this company?"
+            },
+            {
+                "key": "supervisor_name",
+                "label": "Supervisor/Manager Name",
+                "type": "text",
+                "required": False,
+                "level": "optional",
+                "placeholder": "John Smith",
+                "show_if": {"employment_status": "Employed (Job Holder)"},
+                "hint": "Your direct manager or HR head who can verify your employment"
+            },
+            {
+                "key": "supervisor_designation",
+                "label": "Supervisor Designation",
+                "type": "text",
+                "required": False,
+                "level": "optional",
+                "placeholder": "HR Manager / Department Head",
+                "show_if": {"employment_status": "Employed (Job Holder)"}
             }
         ]
     },

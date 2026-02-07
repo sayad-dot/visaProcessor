@@ -10,18 +10,14 @@ backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ba
 sys.path.insert(0, backend_path)
 
 from app.database import init_db, engine
-from app.models import Base, RequiredDocument, DocumentType
+from app.models import Base, RequiredDocument, DocumentType, ApplicationType
 from sqlalchemy.orm import Session
 from loguru import logger
 
 
 def seed_required_documents():
     """Seed the database with required documents for Iceland tourist visa
-    
-    NEW SYSTEM:
-    - Only 3 MANDATORY documents: Passport, NID Bangla, Bank Solvency
-    - All other documents are OPTIONAL - upload if available, generate if not
-    - System can analyze ALL 16 document types
+    - Different requirements for BUSINESS vs JOB applicants
     """
     
     with Session(engine) as session:
@@ -29,91 +25,76 @@ def seed_required_documents():
             # Check if data already exists
             existing = session.query(RequiredDocument).first()
             if existing:
-                logger.info("Required documents already seeded")
-                return
+                logger.info("Required documents already seeded. Clearing old data...")
+                session.query(RequiredDocument).delete()
+                session.commit()
             
-            # ===== MANDATORY DOCUMENTS (2 - MUST upload) =====
-            mandatory_documents = [
-                ('passport_copy', 'Valid passport copy - REQUIRED', False, True),
-                ('nid_bangla', 'National ID card (Bangla) - REQUIRED', False, True),
+            # ===== BUSINESS OWNER / SELF-EMPLOYED =====
+            business_documents = [
+                # Mandatory - to upload
+                ('passport_copy', 'Passport copy - PDF', False, True),
+                ('nid_bangla', 'NID Bangla version - PDF', False, True),
+                ('visa_history', 'Visa history copies - PDF', False, True),
+                ('nid_english', 'NID English translated copy - PDF', False, True),
+                ('trade_license', 'Trade license English translated - PDF', False, True),
+                ('tin_certificate', 'TIN certificate - PDF', False, True),
+                ('visiting_card', 'Visiting card - PDF', False, True),
+                ('cover_letter', 'Cover letter - PDF', True, True),
+                ('travel_itinerary', 'Travel itinerary - PDF', True, True),
+                ('travel_history', 'Travel History - PDF', True, True),
+                ('air_ticket', 'Air ticket Booking - PDF', False, True),
+                ('hotel_booking', 'Hotel Booking - PDF', False, True),
+                ('bank_statement', 'Bank statement - PDF', False, True),
             ]
             
-            # ===== SUGGESTED DOCUMENTS (1 - Recommended to upload) =====
-            suggested_documents = [
-                ('bank_solvency', 'Bank solvency certificate - SUGGESTED (Upload if available)', False, False),
+            # ===== JOB HOLDER / EMPLOYEE =====
+            job_documents = [
+                # Mandatory - to upload
+                ('passport_copy', 'Passport copy - PDF', False, True),
+                ('nid_bangla', 'NID Bangla version - PDF', False, True),
+                ('visa_history', 'Visa history copies - PDF', False, True),
+                ('nid_english', 'NID English translated copy - PDF', False, True),
+                ('job_noc', 'JOB NOC (No Objection Certificate) - PDF', False, True),
+                ('tin_certificate', 'TIN certificate - PDF', False, True),
+                ('visiting_card', 'Visiting card - PDF', False, True),
+                ('job_id_card', 'JOB ID card - PDF', False, True),
+                ('payslip', 'Payslip of last 6 months salary - PDF', False, True),
+                ('cover_letter', 'Cover letter - PDF', True, True),
+                ('travel_itinerary', 'Travel itinerary - PDF', True, True),
+                ('travel_history', 'Travel History - PDF', True, True),
+                ('air_ticket', 'Air ticket Booking - PDF', False, True),
+                ('hotel_booking', 'Hotel Booking - PDF', False, True),
+                ('bank_statement', 'Bank statement - PDF', False, True),
             ]
             
-            # ===== OPTIONAL USER DOCUMENTS (5 - upload if available) =====
-            optional_user_documents = [
-                ('visa_history', 'Previous visa history from passport (Optional - helps with travel history)', False, False),
-                ('tin_certificate', 'Tax Identification Number certificate (Optional)', False, False),
-                ('income_tax_3years', 'Income tax returns for last 3 years (Optional - helps with financial statement)', False, False),
-                ('hotel_booking', 'Hotel booking confirmation (Optional - helps with itinerary)', False, False),
-                ('air_ticket', 'Air ticket booking (Optional - helps with itinerary)', False, False),
-            ]
-            
-            # ===== GENERATED DOCUMENTS (8 - Always generated by AI) =====
-            generated_documents = [
-                ('asset_valuation', 'Asset valuation certificate - Generated by AI from questionnaire and uploaded docs', True, False),
-                ('nid_english', 'National ID English translation - Generated from Bangla NID', True, False),
-                ('visiting_card', 'Professional visiting card - Generated from applicant information', True, False),
-                ('cover_letter', 'Visa application cover letter - MOST IMPORTANT - Generated from ALL data', True, False),
-                ('travel_itinerary', 'Detailed travel itinerary - Generated from bookings or questionnaire', True, False),
-                ('travel_history', 'Travel history summary - Generated from visa stamps or questionnaire', True, False),
-                ('home_tie_statement', 'Home tie statement letter - Generated showing connections to Bangladesh', True, False),
-                ('financial_statement', 'Financial statement summary - Generated from bank and tax documents', True, False),
-            ]
-            
-            # Add mandatory documents
-            for doc_type, description, can_generate, is_mandatory in mandatory_documents:
+            # Add business documents
+            for doc_type, description, can_generate, is_mandatory in business_documents:
                 doc = RequiredDocument(
                     country="Iceland",
                     visa_type="Tourist",
+                    application_type=ApplicationType.BUSINESS,
                     document_type=DocumentType[doc_type.upper()],
-                    is_mandatory=is_mandatory,  # True for passport & NID
+                    is_mandatory=is_mandatory,
                     description=description,
                     can_be_generated=can_generate
                 )
                 session.add(doc)
             
-            # Add suggested documents
-            for doc_type, description, can_generate, is_mandatory in suggested_documents:
+            # Add job documents
+            for doc_type, description, can_generate, is_mandatory in job_documents:
                 doc = RequiredDocument(
                     country="Iceland",
                     visa_type="Tourist",
+                    application_type=ApplicationType.JOB,
                     document_type=DocumentType[doc_type.upper()],
-                    is_mandatory=is_mandatory,  # False - suggested only
-                    description=description,
-                    can_be_generated=can_generate
-                )
-                session.add(doc)
-            
-            # Add optional user documents
-            for doc_type, description, can_generate, is_mandatory in optional_user_documents:
-                doc = RequiredDocument(
-                    country="Iceland",
-                    visa_type="Tourist",
-                    document_type=DocumentType[doc_type.upper()],
-                    is_mandatory=is_mandatory,  # False for optional
-                    description=description,
-                    can_be_generated=can_generate
-                )
-                session.add(doc)
-            
-            # Add generated documents (not mandatory to upload, will be generated)
-            for doc_type, description, can_generate, is_mandatory in generated_documents:
-                doc = RequiredDocument(
-                    country="Iceland",
-                    visa_type="Tourist",
-                    document_type=DocumentType[doc_type.upper()],
-                    is_mandatory=is_mandatory,  # False - will be generated
+                    is_mandatory=is_mandatory,
                     description=description,
                     can_be_generated=can_generate
                 )
                 session.add(doc)
             
             session.commit()
-            logger.info("Successfully seeded required documents")
+            logger.info(f"Successfully seeded {len(business_documents)} business documents and {len(job_documents)} job documents")
             
         except Exception as e:
             logger.error(f"Error seeding database: {str(e)}")

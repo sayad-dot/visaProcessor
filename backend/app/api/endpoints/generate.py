@@ -42,13 +42,22 @@ async def start_generation(
     if existing:
         return {"message": "Generation already in progress", "status": "generating"}
     
-    # Calculate how many documents need to be generated (DYNAMIC)
-    # All 13 AI-generatable document types
+    # Get application type to determine which documents to generate
+    app_type = getattr(app, 'application_type', 'business')
+    
+    # Calculate how many documents need to be generated (DYNAMIC based on type)
+    # Base documents for both types (11 common docs)
     all_generatable_types = [
         "cover_letter", "nid_english", "visiting_card", "financial_statement",
         "travel_itinerary", "travel_history", "home_tie_statement", "asset_valuation",
-        "tin_certificate", "tax_certificate", "trade_license", "hotel_booking", "air_ticket"
+        "tin_certificate", "tax_certificate", "hotel_booking", "air_ticket"
     ]
+    
+    # Add type-specific documents
+    if app_type == 'business':
+        all_generatable_types.append("trade_license")
+    elif app_type == 'job':
+        all_generatable_types.extend(["job_noc", "job_id_card"])
     
     # Check which ones are already uploaded
     uploaded_docs = db.query(Document).filter(
@@ -86,6 +95,10 @@ def generate_documents_task(application_id: int, db: Session):
     """Background task to generate all documents"""
     try:
         generator = PDFGeneratorService(db, application_id)
+        application = generator.application
+        
+        # Get application type (fallback to 'business' for existing apps)
+        app_type = getattr(application, 'application_type', 'business')
         
         # Update session
         generation_sessions[application_id]["status"] = "generating"
@@ -106,7 +119,9 @@ def generate_documents_task(application_id: int, db: Session):
             "asset_valuation": ("Asset Valuation", 10),
             "tin_certificate": ("TIN Certificate", 7),
             "tax_certificate": ("Tax Certificate", 7),
-            "trade_license": ("Trade License", 7),
+            "trade_license": ("Trade License", 7),  # Business only
+            "job_noc": ("Job NOC", 7),  # Job only
+            "job_id_card": ("Job ID Card", 6),  # Job only
             "hotel_booking": ("Hotel Booking", 9),
             "air_ticket": ("Air Ticket", 9),
         }
@@ -146,6 +161,10 @@ def generate_documents_task(application_id: int, db: Session):
                     generator.generate_tax_certificate()
                 elif doc_type == "trade_license":
                     generator.generate_trade_license()
+                elif doc_type == "job_noc":
+                    generator.generate_job_noc()
+                elif doc_type == "job_id_card":
+                    generator.generate_job_id_card()
                 elif doc_type == "hotel_booking":
                     generator.generate_hotel_booking()
                 elif doc_type == "air_ticket":

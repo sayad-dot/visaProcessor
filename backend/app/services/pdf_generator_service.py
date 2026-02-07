@@ -199,6 +199,55 @@ class PDFGeneratorService:
         logger.warning(f"⚠️  Array '{key}' is not a list: {type(value)}")
         return []
     
+    def _get_applicant_type_info(self) -> Dict[str, str]:
+        """
+        Determine if applicant is Job Holder or Business Owner and return appropriate text.
+        Returns a dictionary with keys:
+        - is_job_holder: bool
+        - type_label: "Job Holder" or "Business Owner"
+        - profession_desc: "employed professional" or "business owner/entrepreneur"
+        - work_tie_desc: Detailed description of work ties
+        - occupation_intro: Introduction sentence for documents
+        """
+        # Get application_type from model (set during application creation)
+        app_type = getattr(self.application, 'application_type', 'business')
+        
+        # Get employment_status from questionnaire as backup
+        employment_status = self._get_value('employment_status') or ''
+        
+        # Determine if job holder based on multiple signals
+        is_job_holder = (
+            app_type == 'job' or 
+            'Employed' in employment_status or 
+            'Job Holder' in employment_status or
+            'Employee' in employment_status
+        )
+        
+        # Get common data
+        company_name = self._get_value('company_name', 'employment.company_name', 'business.company_name') or 'Company Name'
+        profession = self._get_value('job_title', 'employment.job_title', 'business_type', 'business.business_type') or 'Professional'
+        
+        if is_job_holder:
+            return {
+                'is_job_holder': True,
+                'type_label': 'Job Holder',
+                'profession_desc': 'employed professional',
+                'work_tie_desc': f"I am employed at {company_name} as {profession}. My employer expects my return after the trip, and I have ongoing responsibilities and work contracts. My position requires my regular presence, and I must return to Bangladesh to continue my duties. My company depends on my contributions and I have clear obligations to fulfill.",
+                'occupation_intro': f"I am currently employed as {profession} at {company_name}",
+                'business_section_title': 'Employment Details',
+                'business_desc': f"I work as {profession} at {company_name}. I have been with this company for a considerable time and hold an important position. My role involves daily responsibilities that require my presence. I receive a regular monthly salary and have job security. My employer has granted me leave for this travel, expecting my return to continue work.",
+            }
+        else:
+            return {
+                'is_job_holder': False,
+                'type_label': 'Business Owner',
+                'profession_desc': 'business owner/entrepreneur',
+                'work_tie_desc': f"I am the proprietor of {company_name} and responsible for daily operations. My business requires my presence and I must return to continue operations. All employees depend on me for management and decision-making. Without my oversight, the business cannot function properly.",
+                'occupation_intro': f"I am currently a Business Owner. My company name is \"{company_name}\" and I am the founder of my business",
+                'business_section_title': 'Business Details',
+                'business_desc': f"I own and operate {company_name}, a {profession} business. I established this company and have been running it for several years. As the owner, I am responsible for all major decisions, daily operations, employee management, and business development. My business requires my constant attention and supervision. All employees depend on me for their livelihood.",
+            }
+    
     def _get_banks(self) -> List[Dict[str, Any]]:
         """Get bank accounts from questionnaire or auto-filled data"""
         banks = self._get_array('banks')
@@ -401,26 +450,11 @@ class PDFGeneratorService:
                 "reasons_to_return": self._get_value('reasons_to_return', 'home_ties.reasons_to_return') or 'Family, business, and property responsibilities in Bangladesh'
             }
             
-            # NEW: Determine application type - check both application_type and employment_status
-            app_type = getattr(self.application, 'application_type', 'business')
-            employment_status = self._get_value('employment_status') or ''
-            
-            # Determine if business or job based on multiple signals
-            is_job_holder = (
-                app_type == 'job' or 
-                'Employed' in employment_status or 
-                'Job Holder' in employment_status
-            )
-            
-            # Set profession description and work ties based on type
-            if is_job_holder:
-                profession_desc = "employed professional"
-                work_tie_desc = f"I am employed at {applicant_data['company']} as {applicant_data['profession']}. My employer expects my return after the trip, and I have ongoing responsibilities and work contracts. My position requires my regular presence, and I must return to Bangladesh to continue my duties."
-                occupation_intro = f"I am currently employed as {applicant_data['profession']} at {applicant_data['company']}"
-            else:
-                profession_desc = "business owner/entrepreneur"
-                work_tie_desc = f"I am the proprietor of {applicant_data['company']} and responsible for daily operations. My business requires my presence and I must return to continue operations. All employees depend on me for management and decision-making."
-                occupation_intro = f"I am currently a Business Owner. My company name is \"{applicant_data['company']}\" and I am the founder of my business"
+            # Get applicant type info (job holder vs business owner)
+            type_info = self._get_applicant_type_info()
+            profession_desc = type_info['profession_desc']
+            work_tie_desc = type_info['work_tie_desc']
+            occupation_intro = type_info['occupation_intro']
             
             self._update_progress(doc_record, 20)
 
@@ -863,15 +897,16 @@ Bangladesh"""
             elif not website:
                 website = 'www.company.com'
             
-            # If designation not found, create from employment status
+            # Get applicant type info (job holder vs business owner)
+            type_info = self._get_applicant_type_info()
+            
+            # If designation not found, use type-appropriate default
             employment_status = self._get_value('employment_status')
             if not designation:
-                if employment_status == 'Business Owner':
-                    designation = "CEO & Managing Director"
-                elif employment_status == 'Employed':
-                    designation = "Professional"
+                if type_info['is_job_holder']:
+                    designation = self._get_value('job_title', 'employment.job_title') or "Professional"
                 else:
-                    designation = "Business Professional"
+                    designation = "CEO & Managing Director"
             
             self._update_progress(doc_record, 40)
             
@@ -1183,9 +1218,13 @@ Bangladesh"""
             story.append(monthly_table)
             story.append(Spacer(1, 0.3*inch))
             
+            # Get applicant type info for funding source description
+            type_info = self._get_applicant_type_info()
+            default_funding = "Personal savings and income from employment" if type_info['is_job_holder'] else "Personal savings and business income"
+            
             # Trip Funding
             funding_source = self._get_value('funding_source', 'financial.trip_funding_source', 'financial.funding_source')
-            story.append(Paragraph(f"<b>4. Trip Funding Source:</b> {funding_source or 'Personal savings and income from employment/business'}", body_style))
+            story.append(Paragraph(f"<b>4. Trip Funding Source:</b> {funding_source or default_funding}", body_style))
             story.append(Spacer(1, 0.3*inch))
             
             # Declaration
@@ -1546,6 +1585,11 @@ I understand that any false information may result in rejection of my visa appli
             property_info = self._get_value('assets.property_description', 'assets.details')
             reasons = self._get_value('home_ties.reasons_to_return', 'home_ties.return_reasons')
             
+            # Get applicant type info (job holder vs business owner)
+            type_info = self._get_applicant_type_info()
+            business_section_title = type_info['business_section_title']
+            business_desc = type_info['business_desc']
+            
             self._update_progress(doc_record, 30)
             
             # Generate AI content - OPTIMIZED: 1.5-2 pages (NOT 3 pages, NOT less than 1.5)
@@ -1558,7 +1602,7 @@ My information:
 - Mother's Name: {mother_name}
 - Location: {location}
 - Family: {family}
-- Job: {employment} at {company}
+- Work: {business_desc}
 - Property: {property_info}
 - Why I will return: {reasons}
 
@@ -1573,8 +1617,8 @@ CRITICAL REQUIREMENTS:
 PARAGRAPH 1 (Family Ties - 220-250 words): 
 Start with "My name is {name}..." Explain your family ties - father, mother, siblings, spouse, children. Where you live, your family home, emotional connections. Be specific about family members and why they're important. Keep sentences short and clear.
 
-PARAGRAPH 2 (Employment/Business - 220-250 words):
-Describe your job or business. Your role, daily responsibilities, why you're needed. How long you've worked there. Future projects or plans. Be specific but don't overexplain. Short, clear sentences.
+PARAGRAPH 2 ({business_section_title} - 220-250 words):
+{business_desc} Explain why you need to return - your responsibilities, ongoing commitments, people depending on you. Be specific but don't overexplain. Short, clear sentences.
 
 PARAGRAPH 3 (Property and Financial Ties - 200-240 words):
 Mention property you own (house, land, apartments). Talk about financial commitments, investments, bank accounts. Explain why these tie you to Bangladesh. Keep it factual and brief.
