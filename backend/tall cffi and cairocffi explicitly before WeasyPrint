@@ -1,0 +1,36 @@
+Help on function write_pdf in module weasyprint:
+
+wwrriittee__ppddff(self, target=None, zoom=1, finisher=None, font_config=None, counter_style=None, color_profiles=None, **options)
+    Render the document to a PDF file.
+
+    This is a shortcut for calling :meth:`render`, then
+    :meth:`Document.write_pdf() <document.Document.write_pdf>`.
+
+    :type target:
+        :class:`str`, :class:`pathlib.Path` or :term:`file object`
+    :param target:
+        A filename where the PDF file is generated, a file object, or
+        :obj:`None`.
+    :param float zoom:
+        The zoom factor in PDF units per CSS units.  **Warning**:
+        All CSS units are affected, including physical units like
+        ``cm`` and named sizes like ``A4``.  For values other than
+        1, the physical CSS units will thus be "wrong".
+    :type finisher: :term:`callable`
+    :param finisher:
+        A finisher function or callable that accepts the document and a
+        :class:`pydyf.PDF` object as parameters. Can be passed to perform
+        post-processing on the PDF right before the trailer is written.
+    :type font_config: :class:`text.fonts.FontConfiguration`
+    :param font_config:
+        A font configuration handling ``@font-face`` rules.
+    :type counter_style: :class:`css.counters.CounterStyle`
+    :param counter_style:
+        A dictionary storing ``@counter-style`` rules.
+    :param options:
+        The ``options`` parameter includes by default the
+        :data:`DEFAULT_OPTIONS` values.
+    :returns:
+        The PDF as :obj:`bytes` if ``target`` is not provided or
+        :obj:`None`, otherwise :obj:`None` (the PDF is written to
+        ``target``).
