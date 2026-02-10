@@ -1718,7 +1718,7 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
     # ============================================================================
     
     def generate_asset_valuation(self) -> str:
-        """Generate comprehensive 10-page asset valuation certificate using HTML template (with ReportLab fallback)"""
+        """Generate comprehensive 13-page asset valuation certificate using HTML template (with ReportLab fallback)"""
         doc_record = self._create_document_record("asset_valuation", "Asset_Valuation_Certificate.pdf")
         file_path = doc_record.file_path
         
@@ -1754,24 +1754,83 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
             business_name = self._get_value('company_name', 'business.company_name', 'employment.company_name')
             business_type = self._get_value('business_type', 'employment_status') or 'Business Owner'
             
+            # Get property details from assets or questionnaire
+            prop_1 = property_assets[0] if property_assets else {}
+            prop_2 = property_assets[1] if len(property_assets) > 1 else {}
+            prop_3 = property_assets[2] if len(property_assets) > 2 else {}
+            
+            # Get vehicle details
+            vehicle = vehicle_assets[0] if vehicle_assets else {}
+            
+            # Get business details
+            business = business_assets[0] if business_assets else {}
+            
             self._update_progress(doc_record, 30)
             
-            # Prepare data for template
+            # Prepare comprehensive data for 13-page template
             template_data = {
-                'owner_name': name or 'PROPERTY OWNER',
+                # Basic owner info
+                'owner_name': (name or 'PROPERTY OWNER').upper(),
+                'father_name': father_name or 'FATHER NAME',
                 'owner_father_relation': f"S/O - {father_name}" if father_name else 'S/O - FATHER NAME',
                 'owner_address': address or 'Dhaka, Bangladesh',
                 
-                # Asset values - will be distributed across 3 flats in template
+                # Asset values
                 'flat_value_1': property_value,
                 'flat_value_2': flat_value_2,
                 'flat_value_3': flat_value_3,
                 'car_value': vehicle_value,
                 'business_value': business_value,
                 
-                # Business info
-                'business_name': business_name or 'BUSINESS ENTERPRISE',
-                'business_type': business_type,
+                # Property details with questionnaire fallback
+                'property_location_1': prop_1.get('description') or self._get_value('property_location_1') or 
+                    'House – 38, Level 07, Road – 01, Sector – 02, Block – F, Aftabnagar, Badda, Gulshan – 1212, Dhaka, Bangladesh.',
+                'property_size_1': prop_1.get('size') or self._get_value('property_size_1') or '1,434',
+                'property_size_1_decimal': self._get_value('property_size_1_decimal') or '0.72116',
+                
+                'property_location_2': prop_2.get('description') or self._get_value('property_location_2') or 
+                    '"Priyanka Runway City" Flat Size -2,220 sqft Flat A: 5 (North aild Level/Floor 2d',
+                'property_size_2': prop_2.get('size') or self._get_value('property_size_2') or '2,220',
+                
+                'property_location_3': prop_3.get('description') or self._get_value('property_location_3') or 
+                    '"Basundhara Riverview" 1.4428 Decimal 3 Flat Size 1,625x3= 4,875 sqft Mouza at Badda.',
+                'property_size_3': prop_3.get('size') or self._get_value('property_size_3') or '4,875',
+                'property_size_3_decimal': self._get_value('property_size_3_decimal') or '1.4428',
+                
+                # Vehicle details
+                'vehicle_type': vehicle.get('vehicle_type') or self._get_value('vehicle_type') or 'Car Saloon',
+                'vehicle_reg': vehicle.get('registration_number') or self._get_value('vehicle_reg'),
+                'vehicle_chassis': vehicle.get('chassis_number') or self._get_value('vehicle_chassis'),
+                'vehicle_engine': vehicle.get('engine_number') or self._get_value('vehicle_engine'),
+                'vehicle_manufacturer': vehicle.get('manufacturer') or self._get_value('vehicle_manufacturer') or 'TOYOTA',
+                
+                # Business details
+                'business_name': (business_name or business.get('business_name') or 'BUSINESS ENTERPRISE').upper(),
+                'business_type': business_type or business.get('business_type') or 'Proprietor',
+                'business_ownership': business.get('ownership_percentage') or self._get_value('business_ownership') or '100',
+                'business_location': business.get('location') or self._get_value('business_location'),
+                
+                # Property deed details (from questionnaire or defaults)
+                'deed_a_number': self._get_value('deed_a_number') or '6334',
+                'deed_a_dist': self._get_value('deed_a_dist') or 'DHAKA',
+                'deed_a_ps': self._get_value('deed_a_ps') or 'Tejgaon',
+                'deed_a_sro': self._get_value('deed_a_sro') or 'BADDA',
+                'deed_a_mouza': self._get_value('deed_a_mouza') or 'North Meradia - 23',
+                'deed_a_khatian': self._get_value('deed_a_khatian') or '4874',
+                'deed_a_dag': self._get_value('deed_a_dag') or '609',
+                
+                'deed_c_number': self._get_value('deed_c_number') or '6240',
+                'deed_c_dist': self._get_value('deed_c_dist') or 'DHAKA',
+                'deed_c_ps': self._get_value('deed_c_ps') or 'KERANIGANJ',
+                'deed_c_sro': self._get_value('deed_c_sro') or 'KUNDA',
+                'deed_c_mouza': self._get_value('deed_c_mouza') or 'BEYARA - 94',
+                'deed_c_khatian': self._get_value('deed_c_khatian') or '4253',
+                'deed_c_dag': self._get_value('deed_c_dag') or '1116/1122',
+                
+                # Area information
+                'area_thana_1': self._get_value('area_thana_1') or 'Badda',
+                'area_thana_3': self._get_value('area_thana_3') or 'Keraniganj',
+                'flat_floor_1': self._get_value('flat_floor_1') or '8th Floor Aftab Nagar, Badda, Gulshan – 1212, Dhaka',
             }
             
             self._update_progress(doc_record, 60)
@@ -1781,7 +1840,7 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
                 from app.services.template_renderer import TemplateRenderer
                 renderer = TemplateRenderer()
                 renderer.render_asset_valuation(template_data, file_path)
-                logger.info("✅ Asset valuation generated with WeasyPrint template")
+                logger.info("✅ Asset valuation generated with WeasyPrint 13-page template")
             except Exception as template_error:
                 logger.warning(f"⚠️ WeasyPrint failed: {template_error}. Falling back to ReportLab...")
                 # Fallback: Generate with ReportLab

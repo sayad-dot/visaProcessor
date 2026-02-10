@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Property Valuation Survey Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 10.5pt;
+            line-height: 1.5;
+            color: #000;
+        }
+        
+        .page-break {
+            page-break-after: always;
+        }
+        
+        .page {
+            min-height: 297mm;
+            background: white;
+            position: relative;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 10px;
+            font-size: 9pt;
+            color: #555;
+        }
+        
+        .footer {
+            position: relative;
+            bottom: 20px;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+            padding: 10px;
+        }
+        
+        /* PAGE 1: COVER PAGE */
+        .cover-page {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            height: 297mm;
+            padding: 80px 50px;
+            text-align: center;
+        }
+        
+        .cover-title {
+            font-size: 36pt;
+            font-weight: bold;
+            letter-spacing: 6px;
+            margin-bottom: 40px;
+            line-height: 1.3;
+        }
+        
+        .cover-owner {
+            font-size: 20pt;
+            margin: 40px 0;
+            font-weight: 600;
+        }
+        
+        .cover-year {
+            font-size: 48pt;
+            font-weight: bold;
+            margin: 40px 0;
+        }
+        
+        .cover-valuer {
+            font-size: 14pt;
+            margin-top: 40px;
+        }
+        
+        .cover-company {
+            font-size: 12pt;
+            color: #666;
+        }
+        
+        .cover-date {
+            font-size: 11pt;
+            margin-top: 20px;
+        }
+        
+        /* PAGE 2: TITLE PAGE */
+        .title-page {
+            padding: 40px 50px;
+        }
+        
+        .company-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #333;
+            font-size: 9pt;
+        }
+        
+        .report-title {
+            text-align: center;
+            margin: 40px 0;
+        }
+        
+        .report-main-title {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .report-of {
+            font-size: 12pt;
+            margin: 5px 0;
+        }
+        
+        .report-subtitle {
+            font-size: 16pt;
+            margin: 10px 0;
+        }
+        
+        .owner-details {
+            margin: 40px 0;
+            line-height: 2;
+        }
+        
+        .owner-details p {
+            margin: 5px 0;
+        }
+        
+        .surveyor-info {
+            margin: 40px 0;
+        }
+        
+        .surveyor-info p {
+            margin: 8px 0;
+        }
+        
+        .report-metadata {
+            margin: 30px 0;
+        }
+        
+        /* PAGE 3: SYNOPSIS */
+        .synopsis-page {
+            padding: 40px 50px;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 20px 0;
+            text-decoration: underline;
+        }
+        
+        .synopsis-intro {
+            margin: 20px 0;
+            line-height: 1.8;
+        }
+        
+        .owner-info-box {
+            margin: 20px 0;
+            line-height: 1.8;
+        }
+        
+        .valuation-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+        }
+        
+        .valuation-table th,
+        .valuation-table td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .valuation-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+        
+        .valuation-table .amount {
+            text-align: right;
+        }
+        
+        .total-row {
+            font-weight: bold;
+            background: #f8f8f8;
+        }
+        
+        .exchange-rate {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #333;
+            text-align: center;
+        }
+        
+        /* GENERAL CONTENT STYLING */
+        .content-page {
+            padding: 40px 50px;
+        }
+        
+        .subsection-title {
+            font-weight: bold;
+            margin: 15px 0 10px 0;
+            font-size: 11pt;
+        }
+        
+        .schedule-box {
+            margin: 15px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+        }
+        
+        .property-grid {
+            margin: 10px 0;
+        }
+        
+        .property-row {
+            display: flex;
+            margin: 5px 0;
+        }
+        
+        .property-label {
+            font-weight: 600;
+            min-width: 200px;
+        }
+        
+        .property-value {
+            flex: 1;
+        }
+        
+        table.detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        table.detail-table th,
+        table.detail-table td {
+            border: 1px solid #333;
+            padding: 6px;
+            font-size: 9.5pt;
+        }
+        
+        table.detail-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+        
+        .signature-section {
+            margin-top: 60px;
+            text-align: center;
+        }
+        
+        .signature-line {
+            border-top: 2px solid #000;
+            width: 200px;
+            margin: 60px auto 10px auto;
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 1: COVER PAGE -->
+    <!-- ============================================================ -->
+    <div class="page cover-page">
+        <div>
+            <div class="cover-title">
+                PROPERTY VALUATION<br>
+                SURVEY REPORT
+            </div>
+            <div class="cover-owner">{{ owner_name }}</div>
+            <div class="cover-year">{{ year }}</div>
+        </div>
+        
+        <div>
+            <div class="cover-valuer">A.H.M MOSTOFA KAMAL</div>
+            <div class="cover-company">KAMAL & ASSOCIATES</div>
+            <div class="cover-date">{{ report_date_short }}</div>
+        </div>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 2: TITLE/DETAILS PAGE -->
+    <!-- ============================================================ -->
+    <div class="page title-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <div class="report-title">
+            <div class="report-main-title">VALUATION SURVEY REPORT</div>
+            <div class="report-of">OF</div>
+            <div class="report-subtitle">FLAT & LAND</div>
+        </div>
+        
+        <div class="owner-details">
+            <p><strong>OWNER:</strong> {{ owner_name }}</p>
+            <p>{{ owner_father_relation }}</p>
+            <p><strong>PRESENT ADDRESS:</strong> {{ owner_address }}</p>
+        </div>
+        
+        <div class="surveyor-info">
+            <p><strong>NAME OF SURVEYOR:</strong></p>
+            <p>A.H.M MOSTAFA KAMAL</p>
+            <p>MANAGING DIRECTOR</p>
+            <br>
+            <p><strong>CONSULTANT:</strong></p>
+            <p>SANJIDA ALAM SHARNA</p>
+            <p>B.Sc. ENGINEER</p>
+        </div>
+        
+        <div class="report-metadata">
+            <p><strong>REPORT # K&A/AU - {{ report_number }}</strong></p>
+            <p><strong>DATE:</strong> {{ report_date }}</p>
+            <p><strong>INCORPORATION CERTIFICATE # C-35197 (1943)/98</strong></p>
+        </div>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 3: SYNOPSIS -->
+    <!-- ============================================================ -->
+    <div class="page synopsis-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <div class="report-title">
+            <strong>VALUATION SURVEY REPORT OF</strong><br>
+            <strong>PROPERTIES OWNED BY</strong><br>
+            {{ owner_name }}<br>
+            {{ owner_father_relation }}<br>
+            RESIDENCE: {{ owner_address }}
+        </div>
+        
+        <div class="section-title">S Y N O P S I S</div>
+        
+        <table class="valuation-table">
+            <thead>
+                <tr>
+                    <th>NAME OF THE OWNER</th>
+                    <th>NAME OF THE ASSET</th>
+                    <th>ASSESSED VALUE</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td rowspan="5">{{ owner_name }}<br>{{ owner_father_relation }}</td>
+                    <td>FLAT WITH PARKING</td>
+                    <td class="amount">Tk. {{ flat_value_1 }}</td>
+                </tr>
+                <tr>
+                    <td>FLAT</td>
+                    <td class="amount">Tk. {{ flat_value_2 }}</td>
+                </tr>
+                <tr>
+                    <td>FLAT</td>
+                    <td class="amount">Tk. {{ flat_value_3 }}</td>
+                </tr>
+                <tr>
+                    <td>PRIVATE CAR VALUE</td>
+                    <td class="amount">TK. {{ car_value }}</td>
+                </tr>
+                <tr>
+                    <td>BUSINESS PRESENT MARKET VALUE IN BDT</td>
+                    <td class="amount">TK {{ business_value }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="2" style="text-align: center;"><strong>GRAND TOTAL</strong></td>
+                    <td class="amount">Tk. {{ total_value }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="exchange-rate">
+            <strong>Rate of Exchange:</strong><br>
+            1 POUND = BANGLADESHI Tk. {{ exchange_rate }} &nbsp;&nbsp;&nbsp; <strong>TOTAL POUND: {{ total_pounds }}</strong>
+        </div>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 4: VALUATION INSPECTION REPORT (GENERAL INFO) -->
+    <!-- ============================================================ -->
+    <div class="page content-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <div style="text-align: right; margin: 20px 0;">
+            Ref # CIS/MISC - {{ reference_number }}<br>
+            Date: {{ report_date }}
+        </div>
+        
+        <p>{{ owner_name }}<br>
+        {{ owner_father_relation }}<br>
+        {{ owner_address }}</p>
+        
+        <div class="section-title">VALUATION INSPECTION REPORT OF<br>THE PROPERTY OF {{ owner_name }}</div>
+        
+        <p style="margin: 20px 0;">Dear Sir,</p>
+        
+        <p style="margin: 20px 0; line-height: 1.8;">
+            In response to your request over telephone call made on {{ inspection_request_date }} our skilled 
+            Representative visited your premises on {{ inspection_visit_date }} in order to conduct property 
+            Valuation inspection of below mentioned property:
+        </p>
+        
+        <div class="subsection-title">: General Information:</div>
+        <p><strong>01. Name of applicant:</strong> {{ owner_name }}<br>
+        {{ owner_father_relation }}<br><br>
+        {{ owner_address }}</p>
+        
+        <p style="margin: 15px 0 15px 30px;">
+            <strong>Name of the owner of Property with address:</strong> {{ owner_name }}<br>
+            {{ owner_father_relation }}<br><br>
+            {{ owner_address }}
+        </p>
+        
+        <div class="subsection-title">02. LOCATION OF THE BUILDING:</div>
+        
+        <p><strong>OWNER – {{ owner_name }}</strong><br>
+        <strong>{{ owner_father_relation_short }}</strong></p>
+        
+        <div class="schedule-box">
+            <strong>Schedule - A</strong><br>
+            The Flat as per documents has been found correct after physical measurement and 
+            located at {{ property_location_1 }}
+        </div>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 5: LOCATION DETAILS (SCHEDULES B, C, D, E) -->
+    <!-- ============================================================ -->
+    <div class="page content-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <p><strong>OWNER – {{ owner_name }}</strong></p>
+        
+        <div class="schedule-box">
+            <strong>Schedule – B</strong><br>
+            The Flat as per documents has been found correct after physical measurement and 
+            located at {{ property_location_2 }}
+        </div>
+        
+        <p style="margin-top: 20px;"><strong>OWNER – {{ owner_name }}</strong></p>
+        
+        <div class="schedule-box">
+            <strong>Schedule – C</strong><br>
+            The Flat as per documents has been found correct after physical measurement and 
+            located {{ property_location_3 }}
+        </div>
+        
+        <p style="margin-top: 20px;"><strong>OWNER – {{ owner_name }}</strong></p>
+        
+        <div class="schedule-box">
+            <strong>Schedule – D</strong><br>
+            The Motor Vehicle as per documents has been found correct after physical vehicle<br>
+            Registration No. {{ vehicle_reg }}, Chassis No: {{ vehicle_chassis }}, Engine No: {{ vehicle_engine }}, 
+            Vehicle Type: {{ vehicle_type }}, Manufacturer: {{ vehicle_manufacturer }}.
+        </div>
+        
+        <p style="margin-top: 20px;"><strong>OWNER – {{ owner_name }}</strong></p>
+        
+        <div class="schedule-box">
+            <strong>Schedule – E</strong><br>
+            The "{{ business_name }}" Business as per documents has been found correct after 
+            physical Type of Business ({{ business_type }}) {{ business_ownership }}% Ownership and 
+            located At {{ business_location }}.
+        </div>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 6: POSSESSION & OWNERSHIP, DESCRIPTION -->
+    <!-- ============================================================ -->
+    <div class="page content-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <div class="subsection-title">03. POSSESSION & OWNERSHIP:</div>
+        
+        <p style="margin: 15px 0; line-height: 1.8;">
+            During our physical inspection, we found the flat & land is under possession of the 
+            owner as per local mouza map and {{ owner_name }}, {{ owner_father_relation }} has been 
+            owning & possessing his aforesaid properties peacefully without any hindrance from 
+            any quarter.
+        </p>
+        
+        <div class="subsection-title">DESCRIPTION OF FLAT & Land:</div>
+        
+        <div class="schedule-box">
+            <strong>SCHEDULE -A</strong><br>
+            DEED # : {{ deed_a_number }}<br>
+            DIST : {{ deed_a_dist }}<br>
+            P. S : {{ deed_a_ps }}<br>
+            S.R. O : {{ deed_a_sro }}<br>
+            MOUZA : {{ deed_a_mouza }}<br>
+            KHATIAN # : {{ deed_a_khatian }}<br>
+            DAG # : {{ deed_a_dag }}<br>
+            QUANTUM OF LAND / FLAT WITH CAR PARKING : {{ property_size_1 }} Sqft ({{ property_size_1_decimal }} Ajutangsha)
+        </div>
+        
+        <div class="schedule-box" style="margin-top: 20px;">
+            <strong>SCHEDULE -B</strong><br>
+            The Flat as per documents has been found correct after physical measurement and 
+            located at {{ property_location_2 }}
+        </div>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 7: SCHEDULE C, D, E TABLES -->
+    <!-- ============================================================ -->
+    <div class="page content-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <div class="schedule-box">
+            <strong>SCHEDULE -C</strong><br>
+            DEED # : {{ deed_c_number }}<br>
+            DIST : {{ deed_c_dist }}<br>
+            P. S : {{ deed_c_ps }}<br>
+            S.R. O : {{ deed_c_sro }}<br>
+            MOUZA : {{ deed_c_mouza }}<br>
+            KHATIAN # : {{ deed_c_khatian }}<br>
+            DAG # : {{ deed_c_dag }}<br>
+            QUANTUM OF LAND /FLAT : {{ property_size_3 }} sqft ({{ property_size_3_decimal }} Decimal)
+        </div>
+        
+        <div class="subsection-title" style="margin-top: 30px;">SCHEDULE -D</div>
+        <table class="detail-table">
+            <thead>
+                <tr>
+                    <th>Sl No</th>
+                    <th>Owner's Name</th>
+                    <th>Car Name</th>
+                    <th>Quantity</th>
+                    <th>Registration No.</th>
+                    <th>Present Market Value (BDT)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>01.</td>
+                    <td>{{ owner_name }}</td>
+                    <td>Motor Vehicle</td>
+                    <td>01</td>
+                    <td>{{ vehicle_reg }}</td>
+                    <td style="text-align: right;">{{ car_value }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="subsection-title" style="margin-top: 30px;">SCHEDULE -E</div>
+        <table class="detail-table"> 
+            <thead>
+                <tr>
+                    <th>Sl No</th>
+                    <th>Business Name and Address</th>
+                    <th>Owner's Name</th>
+                    <th>Type of Business</th>
+                    <th>% Of Ownership</th>
+                    <th>Present Market Value (BDT)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>01.</td>
+                    <td>{{ business_name }}<br>{{ business_location }}</td>
+                    <td>{{ owner_name }}</td>
+                    <td>{{ business_type }}</td>
+                    <td>{{ business_ownership }}%</td>
+                    <td style="text-align: right;">{{ business_value }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 8: IMPORTANCE OF THE LOCALITY -->
+    <!-- ============================================================ -->
+    <div class="page content-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <div class="subsection-title">04. IMPORTANCE OF THE LOCALITY:</div>
+        
+        <p style="margin: 15px 0;"><strong>Schedule - A</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            The Flat measuring {{ property_size_1 }} sqft. There about as per deed has been found correct 
+            after physical measurement and investigation and situated at {{ property_location_1 }}. 
+            The Flat is in residential area under {{ area_thana_1 }} Thana. I have the owner of 
+            one car parking and one flat (flat no: {{ flat_floor_1 }}) in this building. The area has 
+            essential services such as, good communication, Telephone, Electricity & Water 
+            etc. The Building Land has easy access with its front side wide road.
+        </p>
+        
+        <p style="margin: 15px 0;"><strong>Schedule – B</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            The Flat as per documents has been found correct after physical measurement and 
+            located at {{ property_location_2 }}.
+        </p>
+        
+        <p style="margin: 15px 0;"><strong>Schedule – C</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            The Flat measuring {{ property_size_3 }} sqft. There about as per deed has been found correct 
+            after physical measurement and investigation and situated at {{ property_location_3 }}. 
+            The Flat is in residential area under {{ area_thana_3 }} Thana. The area has essential services such as, good 
+            communication, Telephone, Electricity & Water etc. The Building Land has easy 
+            access with its front side wide road.
+        </p>
+        
+        <p style="margin: 15px 0;"><strong>Schedule - D</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            The Motor Vehicle as per documents has been found correct after physical vehicle 
+            Registration No. {{ vehicle_reg }}, Chassis No: {{ vehicle_chassis }}, Engine No: {{ vehicle_engine }}, 
+            Vehicle Type: {{ vehicle_type }}, Manufacturer: {{ vehicle_manufacturer }}
+        </p>
+        
+        <p style="margin: 15px 0;"><strong>Schedule – E</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            The "{{ business_name }}" Business as per documents has been found correct after 
+            physical Type of Business ({{ business_type }}) {{ business_ownership }}% Ownership and 
+            located At {{ business_location }}.
+        </p>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 9: METHODOLOGY & BASIS OF VALUATION -->
+    <!-- ============================================================ -->
+    <div class="page content-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <div class="subsection-title">01. METHODOLOGY:</div>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            Our methodology for the assignment was as follows:<br>
+            a) Held entrance meeting with {{ owner_name }}.<br>
+            b) Visited the site to have an idea of the physical infrastructure.<br>
+            c) Made independent verification.<br>
+            d) Checked physical measurement of captioned land & flat.<br>
+            e) Verified the approved plan of the land building, apartment building.<br>
+            f) Valued of the land with market trend to arrive a justified price.
+        </p>
+        
+        <div class="subsection-title">02. BASIS OF VALUATION OF FLAT:</div>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            Determination of the basis of flat valuation is very troublesome as price of a specific 
+            flat in an area is not content. It can very while situating at some area and having 
+            some type of convenience, it can strain different price from different buyer depending 
+            on many related factors.
+        </p>
+        
+        <p style="margin: 10px 0; line-height: 1.8;">
+            a) Whether the land has planning permission,<br>
+            b) Location and size of flat,<br>
+            c) Accessibility and availability of resources such as Gas & Electricity,<br>
+            d) Commercial and residential Importance of the locality,<br>
+            e) Past trends and future appreciation,<br>
+            f) Reduce level etc.,
+        </p>
+        
+        <div class="subsection-title">BUILDING:</div>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            An assessment and valuation of buildings have been determined at basic cost, and has 
+            been determined based on the present cost of building materials. This cost has been 
+            ascertained on the basis of the type as structure, price at which building materials, 
+            technical & non-technical labor cost, transportation, among a host of other factors 
+            are available on site, the quality of materials used in construction, workmanship. 
+            As part of our analysis and valuation, we have also taken into account the quality of 
+            ongoing maintenance and upkeep in placing valuation allowance in calculating 
+            depreciation thereon for the expired portion of the effective life and due 
+            consideration being given with respect to the condition of assets in question and 
+            such other relevant factors, based on our comprehensive survey and valuation of the 
+            above factors in the Dhaka residential area at large. As part of historical trend 
+            analysis, our valuation experts have also carefully analyzed the price of building 
+            materials, such as, cement, bricks, sand and small stones, PVC and electricity wires, 
+            pipelines, from various local and international, ISO 9001 certified vendors, 
+            such as, RAK Ceramic among others, over a 10-year time horizon.
+        </p>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 10: DESCRIPTION & PRESENT VALUE -->
+    <!-- ============================================================ -->
+    <div class="page content-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <div class="subsection-title">03. DESCRIPTION OF FLAT:</div>
+        
+        <p style="margin: 10px 0;"><strong>a) {{ flat_floor_1 }} {{ area_thana_1 }}</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            {{ property_size_1 }} sqft flat at {{ property_location_1 }}. It consists of RCC pillar, 
+            Supported by RCC column, grade beams. Bathroom are fitted with Standard sanitation 
+            equipment, tiles finishing floor, standard wooden doors & windows Thai aluminum 
+            glass fitted etc. completed. The plinth area of the building is ({{ property_size_1 }}x1) = 
+            {{ property_size_1 }} sqft.
+        </p>
+        
+        <div class="subsection-title">04. PRESENT VALUE OF FLAT, BUILDING & LAND:</div>
+        
+        <p style="margin: 15px 0;"><strong>Schedule = A</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            Taking all the related factors into consideration<br>
+            We are of the opinion that present value of the<br>
+            Flat in {{ flat_floor_1 }} {{ area_thana_1 }},<br>
+            as It is now Would be Tk. {{ rate_per_sqft_1 }} per sqft<br>
+            Therefore, value of this {{ property_size_1 }} sqft comes to ………………………… <strong>Tk. {{ flat_value_1 }}</strong>
+        </p>
+        
+        <p style="margin: 15px 0;"><strong>Schedule – B</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            Taking all the related factors into consideration<br>
+            We are of the opinion that present value of the<br>
+            {{ property_location_2 }}<br>
+            as It is now Would be Tk. {{ rate_per_sqft_2 }} Per sqft<br>
+            Therefore, value of this {{ property_size_2 }} sqft comes to ………………………… <strong>Tk. {{ flat_value_2 }}</strong>
+        </p>
+        
+        <p style="margin: 15px 0;"><strong>Schedule – C</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            Taking all the related factors into consideration<br>
+            We are of the opinion that present value of the<br>
+            Flat in {{ property_location_3_short }},<br>
+            as It is now Would be Tk. {{ rate_per_sqft_3 }} per sqft<br>
+            Therefore, value of this {{ property_size_3 }} sqft comes to ………………………… <strong>Tk. {{ flat_value_3 }}</strong>
+        </p>
+        
+        <p style="margin: 15px 0;"><strong>Schedule - D</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            The Motor Vehicle as per documents has been found correct after physical vehicle<br>
+            Registration No. {{ vehicle_reg }}, Chassis No: {{ vehicle_chassis }}, Engine No: {{ vehicle_engine }},<br>
+            Vehicle Type: {{ vehicle_type }}, Manufacturer: {{ vehicle_manufacturer }}<br>
+            Therefore, value of this {{ car_value }} comes to ………………………… <strong>Tk. {{ car_value }}</strong>
+        </p>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 11: SCHEDULE E & SUMMARY OF VALUATION -->
+    <!-- ============================================================ -->
+    <div class="page content-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <p style="margin: 15px 0;"><strong>Schedule - E</strong></p>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            Taking all the related factors into consideration<br>
+            We are of the opinion that present value of the<br>
+            Business The "{{ business_name }}" Business as<br>
+            per documents has been found correct after physical<br>
+            Type of Business ({{ business_type }}) {{ business_ownership }}% Ownership and<br>
+            located At {{ business_location }}.<br>
+            Therefore, value of this<br>
+            Present Market Value in (BDT) {{ business_value }} comes to ………………… <strong>Tk. {{ business_value }}</strong>
+        </p>
+        
+        <p style="margin: 30px 0; text-align: center; font-size: 14pt;">
+            <strong>TOTAL FLAT & CAR TK. {{ total_value }}</strong>
+        </p>
+        
+        <div class="subsection-title">10. SUMMARY OF VALUATION:</div>
+        
+        <table class="valuation-table">
+            <thead>
+                <tr>
+                    <th>NAME OF THE OWNER</th>
+                    <th>NAME OF THE ASSET</th>
+                    <th>ASSESSED VALUE</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td rowspan="5">{{ owner_name }}<br>{{ owner_father_relation }}</td>
+                    <td>FLAT WITH PARKING</td>
+                    <td class="amount">Tk. {{ flat_value_1 }}</td>
+                </tr>
+                <tr>
+                    <td>FLAT</td>
+                    <td class="amount">Tk. {{ flat_value_2 }}</td>
+                </tr>
+                <tr>
+                    <td>FLAT</td>
+                    <td class="amount">TK. {{ flat_value_3 }}</td>
+                </tr>
+                <tr>
+                    <td>MOTOR VEHICLE VALUE</td>
+                    <td class="amount">TK. {{ car_value }}</td>
+                </tr>
+                <tr>
+                    <td>BUSINESS PRESENT MARKET VALUE IN BDT</td>
+                    <td class="amount">TK {{ business_value }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="2" style="text-align: center;"><strong>GRAND TOTAL</strong></td>
+                    <td class="amount">Tk. {{ total_value }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="exchange-rate">
+            <strong>Rate of Exchange:</strong><br>
+            1 POUND = BANGLADESHI Tk. {{ exchange_rate }} &nbsp;&nbsp;&nbsp; <strong>TOTAL POUND: {{ total_pounds }}</strong>
+        </div>
+        
+        <p style="margin: 20px 0; text-align: center; font-size: 12pt;">
+            <strong>FLAT & WITH CAR VALUE OF GRAND TOTAL: TK. {{ total_value }}</strong>
+        </p>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 12: LEGAL ASPECTS & OBSERVATIONS -->
+    <!-- ============================================================ -->
+    <div class="page content-page">
+        <div class="company-header">
+            Corporate Office: 1/C, Rahim Chamber, Motijheel, Dhaka-1000<br>
+            Contact: 01777265211, 01783639696, 01715228232, E-mail: info.qrit@gmail.com
+        </div>
+        
+        <p style="margin: 20px 0; line-height: 1.8;">
+            In order to prepare this report, the particulars were noted during our site 
+            inspection and survey Investigation from the locality as well as the relevant 
+            papers and documents what we were shown by the owners is correct,
+        </p>
+        
+        <p style="margin: 20px 0; line-height: 1.8;">
+            The valuations of flat & land Incorporated in this report have been 
+            assessed with utmost care and accuracy without prejudice.
+        </p>
+        
+        <div class="subsection-title">11. LEGAL ASPECT:</div>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            We, the KAMAL & ASSOCIATES. evaluated the properties by 
+            our uniquely skilled personnel however the legal advisor should check the legal 
+            matters.
+        </p>
+        
+        <div class="subsection-title">12. OBSERVATIONS & REMARKS:</div>
+        <p style="margin: 10px 0; line-height: 1.8;">
+            We, the KAMAL & ASSOCIATES. are responsible for the 
+            valuation of the property concerned only but not any encumbrance, string or 
+            interest attached to it.
+        </p>
+        
+        <p style="margin: 15px 0; line-height: 1.8;">
+            Our above assessment of current value of the land is based on our physical inspection 
+            of the said land, checking of present market price and also checking of all relevant 
+            papers/documents and we are satisfied that the value thus assessed by us is quite 
+            fair and reasonable.
+        </p>
+        
+        <p style="margin: 15px 0; line-height: 1.8;">
+            We, KAMAL & ASSOCIATES. Hereby declare that we have 
+            no interest (except as inspector, Surveyor and Assessor of value of land) directly 
+            in any manner what-so-ever in the subject matter in this report.
+        </p>
+        
+        <p style="margin: 15px 0; line-height: 1.8;">
+            This report contains 12 (Twelve) pages, each page of which bears the signature of 
+            the undersigned.
+        </p>
+        
+        <p style="margin: 15px 0; line-height: 1.8;">
+            Our responsibility is limited to the exercise of reasonable care. This report does 
+            not intend to relieve any party from its contractual obligation and is issued 
+            WITHOUT PREJUDICE.
+        </p>
+        
+        <p style="margin: 15px 0; line-height: 1.8;">
+            This report issued at Dhaka on {{ report_date }} against our "Trade License No. 
+            0955295'' issued from the Dhaka City Corporation, Dhaka and Register of Joint Stock 
+            Company, Dhaka, Govt. Peoples Republic of Bangladesh, which entitles us 
+            To survey & assess the value of these property.
+        </p>
+        
+        <p style="margin: 40px 0;">Truly yours</p>
+        
+        <p style="margin: 20px 0;">Signed for & on behalf of<br>
+        <strong>Kamal & Associates</strong></p>
+    </div>
+    <div class="page-break"></div>
+    
+    <!-- ============================================================ -->
+    <!-- PAGE 13: SIGNATURE PAGE -->
+    <!-- ============================================================ -->
+    <div class="page content-page">
+        <div style="height: 297mm; display: flex; align-items: center; justify-content: center;">
+            <div class="signature-section">
+                <div class="signature-line"></div>
+                <p style="margin-top: 10px; font-weight: bold;">A.H.M MOSTOFA KAMAL</p>
+                <p>Managing Director</p>
+                <p>KAMAL & ASSOCIATES</p>
+                <p style="margin-top: 20px;">Date: {{ report_date }}</p>
+            </div>
+        </div>
+    </div>
+    
+</body>
+</html>
