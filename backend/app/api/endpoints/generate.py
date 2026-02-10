@@ -322,6 +322,8 @@ async def download_document(
 @router.get("/{application_id}/download-all")
 async def download_all_documents(application_id: int, db: Session = Depends(get_db)):
     """Download all documents (uploaded + generated) as ZIP"""
+    import logging
+    logger = logging.getLogger(__name__)
     
     # Get uploaded documents
     uploaded_docs = db.query(Document).filter(
@@ -335,10 +337,13 @@ async def download_all_documents(application_id: int, db: Session = Depends(get_
         GeneratedDocument.status == GenerationStatus.COMPLETED
     ).all()
     
+    logger.info(f"📦 Preparing ZIP for app {application_id}: {len(uploaded_docs)} uploaded, {len(generated_docs)} generated")
+    
     # Create ZIP file
     zip_path = f"uploads/app_{application_id}/all_documents_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
     os.makedirs(os.path.dirname(zip_path), exist_ok=True)
     
+    files_added = 0
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         # Add uploaded documents (all files in root folder)
         for doc in uploaded_docs:
@@ -346,6 +351,10 @@ async def download_all_documents(application_id: int, db: Session = Depends(get_
                 # Use only the filename, no folder prefix
                 arcname = doc.document_name
                 zipf.write(doc.file_path, arcname)
+                files_added += 1
+                logger.info(f"  ✅ Added uploaded: {arcname}")
+            else:
+                logger.warning(f"  ⚠️ Missing uploaded file: {doc.file_path}")
         
         # Add generated documents (all files in root folder)
         for doc in generated_docs:
@@ -353,6 +362,16 @@ async def download_all_documents(application_id: int, db: Session = Depends(get_
                 # Use only the filename, no folder prefix
                 arcname = doc.file_name
                 zipf.write(doc.file_path, arcname)
+                files_added += 1
+                logger.info(f"  ✅ Added generated: {arcname}")
+            else:
+                logger.warning(f"  ⚠️ Missing generated file: {doc.file_path}")
+    
+    zip_size = os.path.getsize(zip_path)
+    logger.info(f"📦 ZIP created: {files_added} files, {zip_size} bytes")
+    
+    if files_added == 0:
+        logger.error(f"❌ ZIP is empty! No files were added.")
     
     return FileResponse(
         zip_path,

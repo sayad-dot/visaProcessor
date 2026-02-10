@@ -88,7 +88,13 @@ class TemplateRenderer:
         html_content = template.render(**template_data)
         
         # Generate PDF using WeasyPrint
-        HTML(string=html_content).write_pdf(output_path)
+        try:
+            HTML(string=html_content).write_pdf(output_path)
+        except Exception as e:
+            # Enhanced error message
+            import traceback
+            error_details = traceback.format_exc()
+            raise Exception(f"WeasyPrint rendering failed: {str(e)}\n\nFull traceback:\n{error_details}")
         
         return output_path
     
