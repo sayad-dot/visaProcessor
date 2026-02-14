@@ -1978,19 +1978,19 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         c.setFont('Helvetica', 13)
         c.drawCentredString(page_width/2, page_height - 530, datetime.now().strftime('%d %B %Y'))
         
-        # Professional seal/stamp area
+        # Professional seal/stamp area - increased height to fit all text
         c.setStrokeColor(colors.HexColor('#D4AF37'))
         c.setLineWidth(2)
-        c.rect(page_width/2 - 100, 150, 200, 80, fill=False, stroke=True)
+        c.rect(page_width/2 - 100, 140, 200, 100, fill=False, stroke=True)
         
         # Valuer information - Premium style inside stamp box
         c.setFillColor(colors.HexColor('#D4AF37'))
         c.setFont('Helvetica-Bold', 15)
-        c.drawCentredString(page_width/2, 210, "Kamal & Associates")
+        c.drawCentredString(page_width/2, 215, "Kamal & Associates")
         c.setFillColor(colors.white)
-        c.setFont('Helvetica', 11)
-        c.drawCentredString(page_width/2, 190, "Licensed Professional Valuers & Consultants")
-        c.drawCentredString(page_width/2, 172, "Dhaka, Bangladesh")
+        c.setFont('Helvetica', 10)
+        c.drawCentredString(page_width/2, 195, "Licensed Professional Valuers & Consultants")
+        c.drawCentredString(page_width/2, 175, "Dhaka, Bangladesh")
         
         c.showPage()
         
@@ -2381,7 +2381,7 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         vehicle_specs = [
             ("Make & Model:", "Toyota Corolla XLi 1.8"),
             ("Year:", "2021 Model (2 years old)"),
-            ("Registration:", "Dhaka Metro-গ-১২-৩৪৫৬"),
+            ("Registration:", "Dhaka Metro - GA-12-3456"),
             ("Engine:", "1800cc Petrol Engine"),
             ("Color:", "Silver Metallic"),
             ("Mileage:", "45,000 km (Excellent condition)"),
@@ -2973,12 +2973,12 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         # Premium signature section
         y -= 80
         
-        # Signature box
+        # Signature box - increased height to fit all content
         c.setFillColor(colors.HexColor('#F8F9FA'))
-        c.rect(70, y - 75, 220, 95, fill=True, stroke=False)
+        c.rect(70, y - 85, 220, 105, fill=True, stroke=False)
         c.setStrokeColor(colors.HexColor('#D4AF37'))
         c.setLineWidth(2)
-        c.rect(70, y - 75, 220, 95, fill=False, stroke=True)
+        c.rect(70, y - 85, 220, 105, fill=False, stroke=True)
         
         # Signature line
         c.setStrokeColor(colors.black)
@@ -3051,12 +3051,12 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         
         y = page_height - 160
         
-        # Summary Box
+        # Summary Box - increased height to prevent overflow
         c.setFillColor(colors.HexColor('#F0F8FF'))
-        c.rect(45, y - 220, page_width - 90, 230, fill=True, stroke=False)
+        c.rect(45, y - 240, page_width - 90, 250, fill=True, stroke=False)
         c.setStrokeColor(colors.HexColor('#D4AF37'))
         c.setLineWidth(2)
-        c.rect(45, y - 220, page_width - 90, 230, fill=False, stroke=True)
+        c.rect(45, y - 240, page_width - 90, 250, fill=False, stroke=True)
         
         c.setFillColor(colors.HexColor('#1A1A1A'))
         c.setFont('Helvetica-Bold', 14)
