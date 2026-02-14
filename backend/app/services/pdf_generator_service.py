@@ -3339,119 +3339,270 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
     # ============================================================================
     
     def generate_tax_certificate(self) -> str:
-        """Generate Tax Return Certificate / Tax Clearance"""
+        """Generate eReturn-style Income Tax Certificate matching official template"""
         doc_record = self._create_document_record("tax_certificate", "Tax_Certificate.pdf")
         file_path = doc_record.file_path
         
         try:
             self._update_progress(doc_record, 10)
             
-            # Get tax data
-            name = self._get_value('passport_copy.full_name', 'nid_bangla.name_english', 'tin_certificate.taxpayer_name', 'personal.full_name')
-            tin = self._get_value('tin_certificate.tin_number', 'tax.tin_number') or f'TIN-{datetime.now().year}-{hash(name or "X") % 100000:05d}'
-            assessment_year = self._get_value('tax.assessment_year') or f'{datetime.now().year - 1}-{datetime.now().year}'
-            tax_paid = self._get_value('income_tax_3years.year1_tax_paid', 'tax.tax_paid') or '0'
-            income = self._get_value('income_tax_3years.year1_income', 'financial.annual_income') or '0'
+            # Get personal data
+            name = self._get_value('passport_copy.full_name', 'nid_bangla.name_english', 'tin_certificate.taxpayer_name', 'personal.full_name') or 'NAME'
+            tin = self._get_value('tin_certificate.tin_number', 'tax.tin_number', 'tin_number')
+            if not tin:
+                # Generate realistic TIN format: 123-456-789-1234
+                tin = f'{random.randint(100,999)}-{random.randint(100,999)}-{random.randint(100,999)}-{random.randint(1000,9999)}'
+            
+            father_name = self._get_value('father_name', 'personal.father_name', 'nid_bangla.father_name') or "Father's Name"
+            mother_name = self._get_value('mother_name', 'personal.mother_name', 'nid_bangla.mother_name') or "Mother's Name"
+            
+            present_address = self._get_value('present_address', 'personal.present_address') or 'Dhaka, Bangladesh'
+            permanent_address = self._get_value('permanent_address', 'personal.permanent_address') or present_address
             
             self._update_progress(doc_record, 30)
             
-            # Create PDF
-            pdf = SimpleDocTemplate(file_path, pagesize=A4,
-                                   topMargin=0.8*inch, bottomMargin=0.8*inch,
-                                   leftMargin=1*inch, rightMargin=1*inch)
+            # Get income data from income_sources array (questionnaire data)
+            income_sources = self._get_array('income_sources')
             
-            styles = getSampleStyleSheet()
-            story = []
+            # Use most recent year's data
+            if income_sources:
+                latest = max(income_sources, key=lambda x: x.get('year', 0))
+                total_income = int(latest.get('income', 0))
+                tax_paid = int(latest.get('tax_paid', 0))
+                assessment_year = str(latest.get('year', datetime.now().year))
+            else:
+                # Fallback to old method
+                total_income_str = self._get_value('annual_income', 'financial.annual_income', 'monthly_income')
+                tax_paid_str = self._get_value('tax_paid', 'financial.tax_paid')
+                
+                try:
+                    total_income = int(total_income_str) if total_income_str else 0
+                except:
+                    total_income = 0
+                    
+                try:
+                    tax_paid = int(tax_paid_str) if tax_paid_str else 0
+                except:
+                    tax_paid = 0
+                    
+                assessment_year = str(datetime.now().year)
             
-            # Government letterhead
-            title_style = ParagraphStyle(
-                'Title', parent=styles['Heading1'], fontSize=16,
-                textColor=colors.HexColor('#006a4e'), spaceAfter=5,
-                alignment=TA_CENTER, fontName='Helvetica-Bold'
-            )
-            subtitle_style = ParagraphStyle(
-                'Subtitle', parent=styles['Normal'], fontSize=11,
-                alignment=TA_CENTER, fontName='Helvetica-Bold', textColor=colors.HexColor('#003366')
-            )
-            body_style = ParagraphStyle(
-                'Body', parent=styles['BodyText'], fontSize=10,
-                leading=14, fontName='Helvetica'
-            )
+            # Calculate net wealth from assets if available
+            assets = self._get_array('assets')
+            net_wealth = 0
+            if assets:
+                for asset in assets:
+                    try:
+                        value = asset.get('value', 0)
+                        if isinstance(value, str):
+                            value = int(value.replace(',', ''))
+                        net_wealth += int(value)
+                    except:
+                        pass
             
-            story.append(Spacer(1, 0.3*inch))
-            story.append(Paragraph("GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH", title_style))
-            story.append(Paragraph("NATIONAL BOARD OF REVENUE", subtitle_style))
-            story.append(Paragraph("TAX RETURN CERTIFICATE", subtitle_style))
-            story.append(Spacer(1, 0.4*inch))
+            # If no assets, estimate as 3-4x annual income (typical for visa purposes)
+            if net_wealth == 0 and total_income > 0:
+                net_wealth = total_income * 3.5
             
-            # Certificate number and date
-            cert_no = f"TAX/{datetime.now().year}/NBR/{hash(name or 'X') % 10000:04d}"
-            story.append(Paragraph(f"<b>Certificate No:</b> {cert_no}", body_style))
-            story.append(Paragraph(f"<b>Date:</b> {datetime.now().strftime('%d %B %Y')}", body_style))
-            story.append(Spacer(1, 0.3*inch))
+            self._update_progress(doc_record, 50)
             
-            # Certification statement
-            cert_statement = f"""<b>TO WHOM IT MAY CONCERN</b><br/><br/>
-This is to certify that <b>{name}</b> (TIN: <b>{tin}</b>) has duly filed income tax return 
-for the Assessment Year <b>{assessment_year}</b> and has paid all applicable taxes as per 
-the Income Tax Ordinance, 1984.<br/><br/>
-
-The taxpayer has been compliant with all tax obligations and has fulfilled the requirements 
-under the law."""
+            # Create PDF with canvas for precise layout
+            from reportlab.pdfgen import canvas as pdf_canvas
+            from reportlab.lib.utils import ImageReader
             
-            story.append(Paragraph(cert_statement, body_style))
-            story.append(Spacer(1, 0.3*inch))
+            c = pdf_canvas.Canvas(file_path, pagesize=A4)
+            width, height = A4
             
-            # Tax details table
-            tax_data = [
-                ['Particulars', 'Details'],
-                ['Taxpayer Name', name],
-                ['TIN Number', tin],
-                ['Assessment Year', assessment_year],
-                ['Total Income', f'BDT {income}'],
-                ['Tax Paid', f'BDT {tax_paid}'],
-                ['Return Submission Date', datetime.now().strftime('%d/%m/%Y')],
-                ['Compliance Status', 'COMPLIANT'],
-            ]
+            # Load Bangladesh government logo
+            logo_path = "/media/sayad/Ubuntu-Data/visa/assets/bdlogi.png"
+            if os.path.exists(logo_path):
+                try:
+                    # Bangladesh emblem at top center
+                    logo_width = 60
+                    logo_height = 60
+                    c.drawImage(logo_path, (width - logo_width) / 2, height - 120,
+                               width=logo_width, height=logo_height, preserveAspectRatio=True)
+                except:
+                    pass
             
-            tax_table = Table(tax_data, colWidths=[2.5*inch, 3.5*inch])
-            tax_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#006a4e')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('BACKGROUND', (0, 1), (0, -1), colors.HexColor('#f0f0f0')),
-                ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 10),
-                ('FONT', (0, 1), (-1, -1), 'Helvetica', 9),
-                ('PADDING', (0, 0), (-1, -1), 10),
-                ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-            ]))
+            self._update_progress(doc_record, 60)
             
-            story.append(tax_table)
-            story.append(Spacer(1, 0.4*inch))
+            # Header - Government of Bangladesh
+            y = height - 140
+            c.setFont('Helvetica-Bold', 12)
+            c.drawCentredString(width / 2, y, "Government of the People's Republic of Bangladesh")
             
-            # Validity statement
-            validity = """<b>VALIDITY:</b> This certificate is valid for one year from the date of issue 
-and is issued for official purposes including visa applications, loan applications, and other regulatory requirements."""
-            story.append(Paragraph(validity, body_style))
-            story.append(Spacer(1, 0.5*inch))
+            y -= 20
+            c.setFont('Helvetica-Bold', 11)
+            c.drawCentredString(width / 2, y, "National Board of Revenue")
             
-            # Signature section - empty space for seal as requested
-            sig_text = """<b>Authorized Officer</b><br/>
-Deputy Commissioner of Taxes<br/>
-National Board of Revenue<br/>
-Dhaka, Bangladesh"""
+            y -= 18
+            c.setFont('Helvetica', 10)
+            c.drawCentredString(width / 2, y, "Income Tax Department")
             
-            story.append(Paragraph(sig_text, body_style))
+            # Title
+            y -= 35
+            c.setFont('Helvetica-Bold', 14)
+            c.setFillColor(colors.HexColor('#006a4e'))
+            c.drawCentredString(width / 2, y, "Income Tax Certificate")
             
-            # Build PDF
-            pdf.build(story)
+            y -= 20
+            c.setFont('Helvetica-Bold', 11)
+            c.drawCentredString(width / 2, y, f"Assessment Year: {assessment_year}-{int(assessment_year)+1}")
+            
+            c.setFillColor(colors.black)
+            
+            # Reference number (top right)
+            ref_no = f"Ref: TAX/{assessment_year}/NBR/{random.randint(1000,9999)}"
+            c.setFont('Helvetica', 9)
+            c.drawRightString(width - 50, height - 50, ref_no)
+            c.drawRightString(width - 50, height - 63, f"Date: {datetime.now().strftime('%d/%m/%Y')}")
+            
+            # Certificate body - left aligned labels, right aligned values
+            y -= 50
+            left_margin = 80
+            value_x = 280
+            line_height = 22
+            
+            c.setFont('Helvetica', 10)
+            
+            # Taxpayer Name
+            c.drawString(left_margin, y, "Taxpayer Name:")
+            c.setFont('Helvetica-Bold', 10)
+            c.drawString(value_x, y, name)
+            c.setFont('Helvetica', 10)
+            
+            y -= line_height
+            c.drawString(left_margin, y, "TIN:")
+            c.setFont('Helvetica-Bold', 10)
+            c.drawString(value_x, y, tin)
+            c.setFont('Helvetica', 10)
+            
+            y -= line_height
+            c.drawString(left_margin, y, "Father's Name:")
+            c.drawString(value_x, y, father_name)
+            
+            y -= line_height
+            c.drawString(left_margin, y, "Mother's Name:")
+            c.drawString(value_x, y, mother_name)
+            
+            y -= line_height
+            c.drawString(left_margin, y, "Current Address:")
+            # Wrap address if too long
+            if len(present_address) > 50:
+                c.drawString(value_x, y, present_address[:50])
+                y -= 12
+                c.drawString(value_x, y, present_address[50:])
+            else:
+                c.drawString(value_x, y, present_address)
+            
+            y -= line_height
+            c.drawString(left_margin, y, "Permanent Address:")
+            if len(permanent_address) > 50:
+                c.drawString(value_x, y, permanent_address[:50])
+                y -= 12
+                c.drawString(value_x, y, permanent_address[50:])
+            else:
+                c.drawString(value_x, y, permanent_address)
+            
+            y -= line_height
+            c.drawString(left_margin, y, "Status:")
+            c.drawString(value_x, y, "Individual -> Bangladesh -> Having NID")
+            
+            # Financial details section
+            y -= 30
+            c.setFont('Helvetica-Bold', 11)
+            c.setFillColor(colors.HexColor('#006a4e'))
+            c.drawString(left_margin, y, "Financial Details:")
+            c.setFillColor(colors.black)
+            
+            y -= line_height
+            c.setFont('Helvetica', 10)
+            c.drawString(left_margin, y, "Total Income:")
+            c.setFont('Helvetica-Bold', 10)
+            c.drawString(value_x, y, f"{total_income:,} BDT")
+            c.setFont('Helvetica', 10)
+            
+            y -= line_height
+            c.drawString(left_margin, y, "Net Wealth:")
+            c.setFont('Helvetica-Bold', 10)
+            c.drawString(value_x, y, f"{int(net_wealth):,} BDT")
+            c.setFont('Helvetica', 10)
+            
+            y -= line_height
+            c.drawString(left_margin, y, "Paid Tax:")
+            c.setFont('Helvetica-Bold', 10)
+            c.drawString(value_x, y, f"{tax_paid:,} BDT")
+            c.setFont('Helvetica', 10)
+            
+            self._update_progress(doc_record, 80)
+            
+            # Certificate statement
+            y -= 35
+            c.setFont('Helvetica', 9)
+            cert_text = f"This is to certify that {name} is a registered taxpayer of Taxes Circle-461 (Salary), Taxes Zone-21, Dhaka."
+            # Wrap text
+            words = cert_text.split()
+            line = ""
+            for word in words:
+                if c.stringWidth(line + word, 'Helvetica', 9) < width - 160:
+                    line += word + " "
+                else:
+                    c.drawString(left_margin, y, line)
+                    y -= 12
+                    line = word + " "
+            if line:
+                c.drawString(left_margin, y, line)
+            
+            y -= 12
+            cert_text2 = f"The taxpayer has filed the return of income for the Assessment Year {assessment_year}-{int(assessment_year)+1}."
+            words = cert_text2.split()
+            line = ""
+            for word in words:
+                if c.stringWidth(line + word, 'Helvetica', 9) < width - 160:
+                    line += word + " "
+                else:
+                    c.drawString(left_margin, y, line)
+                    y -= 12
+                    line = word + " "
+            if line:
+                c.drawString(left_margin, y, line)
+            
+            y -= 12
+            cert_text3 = f"Shown Total Income {total_income:,} BDT, Net Wealth {int(net_wealth):,} BDT and Paid Tax {tax_paid:,} BDT."
+            c.drawString(left_margin, y, cert_text3)
+            
+            # Bottom section
+            y = 150
+            
+            # System generated message
+            c.setFont('Helvetica-Oblique', 8)
+            c.setFillColor(colors.grey)
+            c.drawCentredString(width / 2, y, "This is a system generated certificate, and requires no signature.")
+            
+            # QR code placeholder (centered)
+            y += 60
+            c.setFillColor(colors.lightgrey)
+            qr_size = 50
+            c.rect((width - qr_size) / 2, y - qr_size, qr_size, qr_size, fill=1, stroke=1)
+            c.setFillColor(colors.black)
+            c.setFont('Helvetica', 7)
+            c.drawCentredString(width / 2, y - 25, "QR Code")
+            
+            # Save PDF
+            c.showPage()
+            c.save()
             
             file_size = os.path.getsize(file_path)
             doc_record.file_size = file_size
             self._update_progress(doc_record, 100, GenerationStatus.COMPLETED)
             
+            logger.info(f"✅ Tax Certificate generated - Income: {total_income:,} BDT, Tax Paid: {tax_paid:,} BDT, Net Wealth: {int(net_wealth):,} BDT")
+            
             return file_path
             
         except Exception as e:
+            logger.error(f"❌ Tax certificate generation failed: {str(e)}")
             doc_record.error_message = str(e)
             doc_record.status = GenerationStatus.FAILED
             self.db.commit()
