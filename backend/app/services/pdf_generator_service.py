@@ -3410,6 +3410,9 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
             # Create PDF with canvas for precise layout
             from reportlab.pdfgen import canvas as pdf_canvas
             from reportlab.lib.utils import ImageReader
+            from reportlab.graphics.barcode import qr
+            from reportlab.graphics import renderPDF
+            from reportlab.graphics.shapes import Drawing
             
             c = pdf_canvas.Canvas(file_path, pagesize=A4)
             width, height = A4
@@ -3420,17 +3423,20 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
             c.drawRightString(width - 50, height - 40, "eReturn")
             c.setFillColor(colors.black)
             
-            # Load Bangladesh government logo
-            logo_path = "/media/sayad/Ubuntu-Data/visa/assets/bdlogi.png"
+            # Load Bangladesh government logo - use relative path
+            logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'assets', 'bdlogi.png')
             if os.path.exists(logo_path):
                 try:
                     # Bangladesh emblem at top center
-                    logo_width = 60
-                    logo_height = 60
-                    c.drawImage(logo_path, (width - logo_width) / 2, height - 120,
+                    logo_width = 70
+                    logo_height = 70
+                    c.drawImage(logo_path, (width - logo_width) / 2, height - 130,
                                width=logo_width, height=logo_height, preserveAspectRatio=True)
-                except:
-                    pass
+                    logger.info(f"✅ BD logo loaded from: {logo_path}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to load BD logo: {str(e)}")
+            else:
+                logger.warning(f"⚠️ BD logo not found at: {logo_path}")
             
             self._update_progress(doc_record, 60)
             
@@ -3594,14 +3600,19 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
             c.setFillColor(colors.grey)
             c.drawCentredString(width / 2, y, "This is a system generated certificate, and requires no signature.")
             
-            # QR code placeholder (centered)
+            # Generate actual QR code (centered)
             y += 60
-            c.setFillColor(colors.lightgrey)
-            qr_size = 50
-            c.rect((width - qr_size) / 2, y - qr_size, qr_size, qr_size, fill=1, stroke=1)
-            c.setFillColor(colors.black)
-            c.setFont('Helvetica', 7)
-            c.drawCentredString(width / 2, y - 25, "QR Code")
+            try:
+                qr_code = qr.QrCodeWidget(f"TaxCert-{tin}-{assessment_year}")
+                qr_drawing = Drawing(60, 60)
+                qr_drawing.add(qr_code)
+                renderPDF.draw(qr_drawing, c, (width - 60) / 2, y - 60)
+                logger.info("✅ QR code generated")
+            except Exception as e:
+                logger.error(f"❌ QR code generation failed: {str(e)}")
+                # Fallback: Simple placeholder
+                c.setFillColor(colors.lightgrey)
+                c.rect((width - 50) / 2, y - 50, 50, 50, fill=1, stroke=1)
             
             # Save PDF
             c.showPage()
