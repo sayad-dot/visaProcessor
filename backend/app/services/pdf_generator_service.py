@@ -1970,27 +1970,27 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         c.setFont('Helvetica', 12)
         c.drawCentredString(page_width/2, page_height - 482, f"{data['owner_father_relation']}")
         
-        # Date with elegant styling
+        # Date with elegant styling - positioned inside frame
         c.setFillColor(colors.HexColor('#D4AF37'))
         c.setFont('Helvetica-Bold', 11)
-        c.drawCentredString(page_width/2, page_height - 520, "VALUATION DATE")
+        c.drawCentredString(page_width/2, page_height - 508, "VALUATION DATE")
         c.setFillColor(colors.white)
         c.setFont('Helvetica', 13)
-        c.drawCentredString(page_width/2, page_height - 542, datetime.now().strftime('%d %B %Y'))
+        c.drawCentredString(page_width/2, page_height - 530, datetime.now().strftime('%d %B %Y'))
         
         # Professional seal/stamp area
         c.setStrokeColor(colors.HexColor('#D4AF37'))
         c.setLineWidth(2)
         c.rect(page_width/2 - 100, 150, 200, 80, fill=False, stroke=True)
         
-        # Valuer information - Premium style
+        # Valuer information - Premium style inside stamp box
         c.setFillColor(colors.HexColor('#D4AF37'))
         c.setFont('Helvetica-Bold', 15)
-        c.drawCentredString(page_width/2, 200, "Kamal & Associates")
+        c.drawCentredString(page_width/2, 210, "Kamal & Associates")
         c.setFillColor(colors.white)
         c.setFont('Helvetica', 11)
-        c.drawCentredString(page_width/2, 180, "Licensed Professional Valuers & Consultants")
-        c.drawCentredString(page_width/2, 165, "Dhaka, Bangladesh")
+        c.drawCentredString(page_width/2, 190, "Licensed Professional Valuers & Consultants")
+        c.drawCentredString(page_width/2, 172, "Dhaka, Bangladesh")
         
         c.showPage()
         
@@ -2579,12 +2579,12 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         
         y -= 30
         
-        # Comparative Analysis
+        # Comparative Analysis - Increased box height to fit all content
         c.setFillColor(colors.HexColor('#F0F0F0'))
-        c.rect(45, y - 200, page_width - 90, 210, fill=True, stroke=False)
+        c.rect(45, y - 260, page_width - 90, 270, fill=True, stroke=False)
         c.setStrokeColor(colors.HexColor('#D4AF37'))
         c.setLineWidth(1)
-        c.rect(45, y - 200, page_width - 90, 210, fill=False, stroke=True)
+        c.rect(45, y - 260, page_width - 90, 270, fill=False, stroke=True)
         
         c.setFillColor(colors.HexColor('#1A1A1A'))
         c.setFont('Helvetica-Bold', 12)
@@ -2614,7 +2614,7 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         
         for line in comparison_data:
             c.drawString(65, y, line)
-            y -= 16
+            y -= 15
         
         # Footer
         c.setFillColor(colors.HexColor('#D4AF37'))
@@ -2850,12 +2850,12 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         
         y -= 30
         
-        # Disclaimer Box
+        # Disclaimer Box - Increased height to fit all content
         c.setFillColor(colors.HexColor('#FFF8DC'))
-        c.rect(45, y - 85, page_width - 90, 95, fill=True, stroke=False)
+        c.rect(45, y - 110, page_width - 90, 120, fill=True, stroke=False)
         c.setStrokeColor(colors.HexColor('#D4AF37'))
         c.setLineWidth(2)
-        c.rect(45, y - 85, page_width - 90, 95, fill=False, stroke=True)
+        c.rect(45, y - 110, page_width - 90, 120, fill=False, stroke=True)
         
         c.setFillColor(colors.HexColor('#8B0000'))
         c.setFont('Helvetica-Bold', 11)
@@ -2872,10 +2872,10 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
             "transactions conducted based on this report.",
         ]
         
-        y -= 35
+        y -= 32
         for line in disclaimer_text:
             c.drawString(55, y, line)
-            y -= 12
+            y -= 13
         
         # Footer
         c.setFillColor(colors.HexColor('#D4AF37'))
@@ -2897,12 +2897,12 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         c.rect(0, page_height - 15, page_width, 15, fill=True, stroke=False)
         c.rect(0, page_height - 150, page_width, 5, fill=True, stroke=False)
         
-        # Decorative emblem at top
+        # Decorative emblem at top - smaller to avoid overlap
         c.setStrokeColor(colors.HexColor('#D4AF37'))
         c.setLineWidth(3)
-        c.circle(page_width/2, page_height - 80, 35, fill=False, stroke=True)
+        c.circle(page_width/2, page_height - 75, 28, fill=False, stroke=True)
         c.setFillColor(colors.HexColor('#D4AF37'))
-        c.circle(page_width/2, page_height - 80, 8, fill=True, stroke=False)
+        c.circle(page_width/2, page_height - 75, 8, fill=True, stroke=False)
         
         # Title with elegant styling
         c.setFillColor(colors.HexColor('#D4AF37'))
@@ -2919,10 +2919,10 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         c.setFont('Helvetica', 12)
         y = page_height - 200
         
-        # Premium content box
+        # Premium content box - increased height to fit all content
         c.setStrokeColor(colors.HexColor('#D4AF37'))
         c.setLineWidth(1.5)
-        c.rect(60, y - 280, page_width - 120, 320, fill=False, stroke=True)
+        c.rect(60, y - 310, page_width - 120, 350, fill=False, stroke=True)
         
         c.setFillColor(colors.black)
         y -= 20
@@ -2961,7 +2961,7 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
         y -= 18
         c.drawString(80, y, "and is valid for official visa application and immigration purposes.")
         
-        y -= 35
+        y -= 30
         c.setFont('Helvetica-Bold', 11)
         c.setFillColor(colors.HexColor('#0F1419'))
         c.drawString(80, y, f"Prepared for: {data['owner_name']}")
