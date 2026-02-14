@@ -5,6 +5,7 @@ Uses ReportLab for professional PDF generation and Gemini for intelligent conten
 import os
 import io
 import re
+import requests
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from reportlab.lib.pagesizes import letter, A4
@@ -14,6 +15,8 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+from PIL import Image
 import google.generativeai as genai
 from sqlalchemy.orm import Session
 from loguru import logger
@@ -3831,7 +3834,7 @@ Dhaka, Bangladesh"""
     # ============================================================================
     
     def generate_hotel_booking(self) -> str:
-        """Generate premium hotel booking confirmation (Enhanced Booking.com style)"""
+        """Generate professional hotel booking confirmation (Booking.com KEX Hostel style)"""
         doc_record = self._create_document_record("hotel_booking", "Hotel_Booking_Confirmation.pdf")
         file_path = doc_record.file_path
         
@@ -3840,13 +3843,13 @@ Dhaka, Bangladesh"""
             
             # Get booking data
             guest_name = self._get_value('passport_copy.full_name', 'nid_bangla.name_english', 'personal.full_name')
-            hotel_name = self._get_value('hotel.hotel_name', 'hotel_booking.hotel_name') or 'Reykjavik Grand Hotel'
-            hotel_address = self._get_value('hotel.hotel_address', 'hotel_booking.hotel_address') or 'Sigurjon 38, 105 Reykjavik'
+            hotel_name = self._get_value('hotel.hotel_name', 'hotel_booking.hotel_name') or 'KEX Hostel and Hotel'
+            hotel_address = self._get_value('hotel.hotel_address', 'hotel_booking.hotel_address') or 'Skulagata 28, 101 Reykjavik, Iceland'
             check_in = self._get_value('hotel.check_in_date', 'hotel_booking.check_in_date', 'travel.arrival_date') or datetime.now().strftime('%Y-%m-%d')
-            check_out = self._get_value('hotel.check_out_date', 'hotel_booking.check_out_date', 'travel.departure_date') or (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
-            room_type = self._get_value('hotel.room_type', 'hotel_booking.room_type') or 'Deluxe Room'
-            confirmation_no = self._get_value('hotel.confirmation_number', 'hotel_booking.confirmation_number') or f'BK{datetime.now().year}{hash(guest_name or "X") % 10000000:07d}'
-            total_price = self._get_value('hotel.total_price', 'hotel_booking.total_price') or '980'
+            check_out = self._get_value('hotel.check_out_date', 'hotel_booking.check_out_date', 'travel.departure_date') or (datetime.now() + timedelta(days=14)).strftime('%Y-%m-%d')
+            room_type = self._get_value('hotel.room_type', 'hotel_booking.room_type') or 'Bed in 42-Bed Dormitory Room'
+            confirmation_no = self._get_value('hotel.confirmation_number', 'hotel_booking.confirmation_number') or f'69A.123.220'
+            total_price = self._get_value('hotel.total_price', 'hotel_booking.total_price') or '85500'
             
             # Calculate nights
             try:
@@ -3855,231 +3858,442 @@ Dhaka, Bangladesh"""
                 cout = dt.strptime(check_out, '%Y-%m-%d')
                 nights = (cout - cin).days
             except:
-                nights = 7
+                nights = 14
             
-            # Calculate nightly rate
+            # Calculate price breakdown
             try:
-                nightly_rate = int(float(total_price)) // nights if nights > 0 else int(float(total_price))
+                base_price = int(float(total_price))
+                vat_amount = int(base_price * 0.11)  # 11% VAT
+                city_tax = int(nights * 50)  # €1 per night city tax
+                bdt_approx = int(base_price * 124)  # EUR to BDT conversion
+                per_night = int(base_price / nights) if nights > 0 else base_price
             except:
-                nightly_rate = 140
+                base_price = 85500
+                vat_amount = 9405
+                city_tax = 730
+                bdt_approx = 10582200
+                per_night = 6107
             
             self._update_progress(doc_record, 30)
             
-            # Create PDF with professional Booking.com style
+            # Create PDF with professional Booking.com KEX Hostel style
             from reportlab.pdfgen import canvas as pdf_canvas
             from reportlab.lib.units import cm
             
             c = pdf_canvas.Canvas(file_path, pagesize=A4)
             page_width, page_height = A4
             
-            # === HEADER: Booking.com brand ===
+            # === HEADER: Booking.com logo ===
+            c.setFillColor(colors.white)
+            c.rect(0, page_height - 2*cm, page_width, 2*cm, fill=True, stroke=False)
+            
             c.setFillColor(colors.HexColor('#003580'))  # Booking.com blue
-            c.rect(0, page_height - 1.5*cm, page_width, 1.5*cm, fill=True, stroke=False)
+            c.setFont("Helvetica-Bold", 28)
+            c.drawString(0.5*cm, page_height - 1.5*cm, "Booking.com")
             
-            c.setFillColor(colors.white)
-            c.setFont("Helvetica-Bold", 22)
-            c.drawString(1.5*cm, page_height - 1.1*cm, "Booking.com")
-            
-            # Top right: Confirmation number
-            c.setFont("Helvetica", 9)
-            c.drawRightString(page_width - 1.5*cm, page_height - 0.7*cm, "Booking confirmation")
-            c.setFont("Helvetica-Bold", 10)
-            c.drawRightString(page_width - 1.5*cm, page_height - 1.1*cm, f"CONFIRMATION NUMBER: {confirmation_no}")
-            c.setFont("Helvetica", 8)
-            c.drawRightString(page_width - 1.5*cm, page_height - 1.4*cm, f"PIN CODE: 0463")
-            
-            # === GREEN SUCCESS BANNER ===
-            c.setFillColor(colors.HexColor('#6cbc1e'))  # Success green
-            c.rect(0, page_height - 3*cm, page_width, 1.2*cm, fill=True, stroke=False)
-            
-            c.setFillColor(colors.white)
-            c.setFont("Helvetica-Bold", 16)
-            c.drawString(1.5*cm, page_height - 2.6*cm, "✓ Your booking is confirmed")
+            # Top right: Booking confirmation header
+            c.setFillColor(colors.black)
             c.setFont("Helvetica", 10)
-            c.drawRightString(page_width - 1.5*cm, page_height - 2.6*cm, f"Confirmation: {confirmation_no}")
+            c.drawRightString(page_width - 0.5*cm, page_height - 1*cm, "Booking confirmation")
+            c.setFillColor(colors.HexColor('#0071c2'))
+            c.setFont("Helvetica-Bold", 11)
+            c.drawRightString(page_width - 0.5*cm, page_height - 1.4*cm, f"CONFIRMATION NUMBER: {confirmation_no}")
+            c.setFillColor(colors.HexColor('#6b6b6b'))
+            c.setFont("Helvetica", 9)
+            c.drawRightString(page_width - 0.5*cm, page_height - 1.8*cm, f"PIN CODE: 1005")
             
-            # === HOTEL INFORMATION BOX WITH PHOTO ===
-            hotel_box_y = page_height - 4.5*cm
-            
-            # Photo placeholder (left side)
-            c.setStrokeColor(colors.HexColor('#cccccc'))
+            # Separator line
+            c.setStrokeColor(colors.HexColor('#e7e7e7'))
             c.setLineWidth(1)
-            c.rect(1.5*cm, hotel_box_y - 3*cm, 3.5*cm, 2.8*cm, fill=False, stroke=True)
-            c.setFillColor(colors.HexColor('#f0f0f0'))
-            c.rect(1.5*cm, hotel_box_y - 3*cm, 3.5*cm, 2.8*cm, fill=True, stroke=False)
-            c.setStrokeColor(colors.HexColor('#cccccc'))
-            c.rect(1.5*cm, hotel_box_y - 3*cm, 3.5*cm, 2.8*cm, fill=False, stroke=True)
-            c.setFillColor(colors.HexColor('#999999'))
-            c.setFont("Helvetica", 8)
-            c.drawCentredString(3.25*cm, hotel_box_y - 1.5*cm, "[Hotel Photo]")
+            c.line(0, page_height - 2*cm, page_width, page_height - 2*cm)
+            
+            # === HOTEL PHOTO AND INFO BOX ===
+            hotel_box_y = page_height - 3*cm
+            
+            # Hotel photo - fetch and display actual image
+            try:
+                # Try to fetch hotel image from URL
+                hotel_image_url = "https://asiahotel.com.bd/wp-content/uploads/EXECUTIVE-SUITE-ROOM.png"
+                response = requests.get(hotel_image_url, timeout=5)
+                response.raise_for_status()
+                
+                # Load image using PIL and ImageReader
+                img_data = io.BytesIO(response.content)
+                img = Image.open(img_data)
+                
+                # Calculate dimensions to fit in 3cm x 2.5cm space while maintaining aspect ratio
+                max_width = 3*cm
+                max_height = 2.5*cm
+                aspect = img.width / img.height
+                
+                if aspect > (max_width / max_height):
+                    # Image is wider - fit to width
+                    img_width = max_width
+                    img_height = max_width / aspect
+                else:
+                    # Image is taller - fit to height
+                    img_height = max_height
+                    img_width = max_height * aspect
+                
+                # Center the image in the box
+                x_offset = 0.5*cm + (max_width - img_width) / 2
+                y_offset = (hotel_box_y - 3*cm) + (max_height - img_height) / 2
+                
+                # Draw the image
+                c.drawImage(ImageReader(img_data), x_offset, y_offset, 
+                           width=img_width, height=img_height, mask='auto')
+                
+                # Draw border around image
+                c.setStrokeColor(colors.HexColor('#cccccc'))
+                c.setLineWidth(0.5)
+                c.rect(0.5*cm, hotel_box_y - 3*cm, 3*cm, 2.5*cm, fill=False, stroke=True)
+                
+            except Exception as e:
+                # Fallback to placeholder if image loading fails
+                logger.warning(f"Failed to load hotel image: {e}, using placeholder")
+                c.setStrokeColor(colors.HexColor('#cccccc'))
+                c.setLineWidth(0.5)
+                c.setFillColor(colors.HexColor('#f5f5f5'))
+                c.rect(0.5*cm, hotel_box_y - 3*cm, 3*cm, 2.5*cm, fill=True, stroke=True)
+                c.setFillColor(colors.HexColor('#999999'))
+                c.setFont("Helvetica", 7)
+                c.drawCentredString(2*cm, hotel_box_y - 1.6*cm, "[Hotel Photo]")
             
             # Hotel details (right side)
             c.setFillColor(colors.HexColor('#003580'))
-            c.setFont("Helvetica-Bold", 14)
-            c.drawString(5.5*cm, hotel_box_y - 0.8*cm, hotel_name)
+            c.setFont("Helvetica-Bold", 13)
+            c.drawString(4*cm, hotel_box_y - 0.7*cm, hotel_name)
             
             c.setFillColor(colors.black)
             c.setFont("Helvetica", 9)
-            c.drawString(5.5*cm, hotel_box_y - 1.3*cm, hotel_address)
+            c.drawString(4*cm, hotel_box_y - 1.1*cm, f"Address: {hotel_address}")
             
             c.setFont("Helvetica", 8)
-            c.drawString(5.5*cm, hotel_box_y - 1.7*cm, f"Phone: +354 7350 414124")
+            c.drawString(4*cm, hotel_box_y - 1.5*cm, f"Phone: +354 863 1196")
             
-            c.setFillColor(colors.HexColor('#666666'))
-            c.setFont("Helvetica-Bold", 8)
-            c.drawString(5.5*cm, hotel_box_y - 2.1*cm, f"GPS coordinates: N 64°51' 12.698, W 000° 12.999")
+            c.setFillColor(colors.HexColor('#6b6b6b'))
+            c.setFont("Helvetica", 8)
+            c.drawString(4*cm, hotel_box_y - 1.9*cm, f"GPS coordinates: N 64° 8' 7.25, W 21° 55' 5.160")
             
-            # Star rating
-            c.setFillColor(colors.HexColor('#febb02'))
-            c.setFont("Helvetica", 10)
-            c.drawString(5.5*cm, hotel_box_y - 2.6*cm, "★★★★ | Rating: 8.9/10 Excellent")
-            
-            # === CHECK-IN/OUT DATES BOX ===
+            # === CHECK-IN / CHECK-OUT TABLE ===
             dates_y = hotel_box_y - 4.5*cm
             
-            # Background boxes
-            c.setFillColor(colors.HexColor('#f5f5f5'))
-            c.rect(1.5*cm, dates_y - 1.8*cm, 6*cm, 1.8*cm, fill=True, stroke=False)
+            # Border box for dates table
             c.setStrokeColor(colors.HexColor('#e0e0e0'))
             c.setLineWidth(0.5)
-            c.rect(1.5*cm, dates_y - 1.8*cm, 6*cm, 1.8*cm, fill=False, stroke=True)
+            c.rect(0.5*cm, dates_y - 3*cm, page_width - 1*cm, 3*cm, fill=False, stroke=True)
             
-            # Check-in
-            c.setFillColor(colors.HexColor('#003580'))
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(2*cm, dates_y - 0.6*cm, "CHECK-IN")
-            c.setFillColor(colors.black)
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(2*cm, dates_y - 1*cm, check_in.replace('-', '/'))
-            c.setFont("Helvetica", 8)
-            c.setFillColor(colors.HexColor('#666666'))
-            c.drawString(2*cm, dates_y - 1.4*cm, "From 14:00")
-            
-            # Check-out
-            c.setFillColor(colors.HexColor('#003580'))
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(4.7*cm, dates_y - 0.6*cm, "CHECK-OUT")
-            c.setFillColor(colors.black)
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(4.7*cm, dates_y - 1*cm, check_out.replace('-', '/'))
-            c.setFont("Helvetica", 8)
-            c.setFillColor(colors.HexColor('#666666'))
-            c.drawString(4.7*cm, dates_y - 1.4*cm, "Until 11:00")
-            
-            # Duration box
+            # Column headers background
             c.setFillColor(colors.HexColor('#f5f5f5'))
-            c.rect(8*cm, dates_y - 1.8*cm, 3*cm, 1.8*cm, fill=True, stroke=False)
-            c.setStrokeColor(colors.HexColor('#e0e0e0'))
-            c.rect(8*cm, dates_y - 1.8*cm, 3*cm, 1.8*cm, fill=False, stroke=True)
+            c.rect(0.5*cm, dates_y - 0.8*cm, (page_width - 1*cm) / 4, 0.8*cm, fill=True, stroke=False)
+            c.rect(0.5*cm + (page_width - 1*cm) / 4, dates_y - 0.8*cm, (page_width - 1*cm) / 4, 0.8*cm, fill=True, stroke=False)
+            c.rect(0.5*cm + 2 * (page_width - 1*cm) / 4, dates_y - 0.8*cm, (page_width - 1*cm) / 4, 0.8*cm, fill=True, stroke=False)
+            c.rect(0.5*cm + 3 * (page_width - 1*cm) / 4, dates_y - 0.8*cm, (page_width - 1*cm) / 4, 0.8*cm, fill=True, stroke=False)
             
+            # Draw vertical separators
+            c.setStrokeColor(colors.HexColor('#e0e0e0'))
+            for i in range(1, 4):
+                x_pos = 0.5*cm + i * (page_width - 1*cm) / 4
+                c.line(x_pos, dates_y - 0.8*cm, x_pos, dates_y - 3*cm)
+            
+            # Draw horizontal separator
+            c.line(0.5*cm, dates_y - 0.8*cm, page_width - 0.5*cm, dates_y - 0.8*cm)
+            
+            # Headers
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica", 9)
+            c.drawCentredString(0.5*cm + (page_width - 1*cm) / 8, dates_y - 0.5*cm, "CHECK-IN")
+            c.drawCentredString(0.5*cm + 3 * (page_width - 1*cm) / 8, dates_y - 0.5*cm, "CHECK-OUT")
+            c.drawCentredString(0.5*cm + 5 * (page_width - 1*cm) / 8, dates_y - 0.5*cm, "NIGHTS")
+            c.drawCentredString(0.5*cm + 7 * (page_width - 1*cm) / 8, dates_y - 0.5*cm, "GUESTS")
+            
+            # Format dates for display
+            try:
+                cin_dt = dt.strptime(check_in, '%Y-%m-%d')
+                cout_dt = dt.strptime(check_out, '%Y-%m-%d')
+                cin_display = cin_dt.strftime('%d')
+                cin_month = cin_dt.strftime('%B')
+                cin_year = cin_dt.strftime('%Y')
+                cin_day = cin_dt.strftime('%A')
+                
+                cout_display = cout_dt.strftime('%d')
+                cout_month = cout_dt.strftime('%B')
+                cout_year = cout_dt.strftime('%Y')
+                cout_day = cout_dt.strftime('%A')
+            except:
+                cin_display = check_in.split('-')[2]
+                cin_month = "February"
+                cin_year = check_in.split('-')[0]
+                cin_day = "Friday"
+                cout_display = check_out.split('-')[2]
+                cout_month = "March"
+                cout_year = check_out.split('-')[0]
+                cout_day = "Friday"
+            
+            # Check-in details
             c.setFillColor(colors.HexColor('#003580'))
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(8.3*cm, dates_y - 0.6*cm, "DURATION")
+            c.setFont("Helvetica-Bold", 20)
+            c.drawCentredString(0.5*cm + (page_width - 1*cm) / 8, dates_y - 1.4*cm, cin_display)
             c.setFillColor(colors.black)
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(8.3*cm, dates_y - 1.1*cm, f"{nights} nights")
-            
-            # === PRICE BOX (Right side) ===
-            c.setFillColor(colors.HexColor('#f5f5f5'))
-            c.rect(11.5*cm, dates_y - 1.8*cm, 7*cm, 1.8*cm, fill=True, stroke=False)
-            c.setStrokeColor(colors.HexColor('#e0e0e0'))
-            c.rect(11.5*cm, dates_y - 1.8*cm, 7*cm, 1.8*cm, fill=False, stroke=True)
-            
-            c.setFillColor(colors.black)
-            c.setFont("Helvetica-Bold", 9)
-            c.drawString(12*cm, dates_y - 0.6*cm, "PRICE")
+            c.setFont("Helvetica", 9)
+            c.drawCentredString(0.5*cm + (page_width - 1*cm) / 8, dates_y - 1.8*cm, cin_month)
             c.setFont("Helvetica", 8)
-            c.drawString(12*cm, dates_y - 0.95*cm, f"1 dormitory bed")
-            c.drawString(12*cm, dates_y - 1.15*cm, f"20 % VAT")
-            c.drawString(12*cm, dates_y - 1.35*cm, f"£ 10 heritage charge per stay")
-            
+            c.drawCentredString(0.5*cm + (page_width - 1*cm) / 8, dates_y - 2.1*cm, cin_year)
             c.setFont("Helvetica-Bold", 8)
-            c.drawRightString(18*cm, dates_y - 0.95*cm, f"BDT {int(float(total_price)):,}")
-            c.drawRightString(18*cm, dates_y - 1.15*cm, f"BDT {int(float(total_price) * 0.2):,}")
-            c.drawRightString(18*cm, dates_y - 1.35*cm, f"BDT 1,667")
+            c.drawCentredString(0.5*cm + (page_width - 1*cm) / 8, dates_y - 2.4*cm, cin_day)
+            c.setFont("Helvetica", 7)
+            c.setFillColor(colors.HexColor('#6b6b6b'))
+            c.drawCentredString(0.5*cm + (page_width - 1*cm) / 8, dates_y - 2.7*cm, "⏰ from 15:00")
             
-            # === ROOM DETAILS SECTION ===
-            room_y = dates_y - 3*cm
+            # Check-out details
+            c.setFillColor(colors.HexColor('#003580'))
+            c.setFont("Helvetica-Bold", 20)
+            c.drawCentredString(0.5*cm + 3 * (page_width - 1*cm) / 8, dates_y - 1.4*cm, cout_display)
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica", 9)
+            c.drawCentredString(0.5*cm + 3 * (page_width - 1*cm) / 8, dates_y - 1.8*cm, cout_month)
+            c.setFont("Helvetica", 8)
+            c.drawCentredString(0.5*cm + 3 * (page_width - 1*cm) / 8, dates_y - 2.1*cm, cout_year)
+            c.setFont("Helvetica-Bold", 8)
+            c.drawCentredString(0.5*cm + 3 * (page_width - 1*cm) / 8, dates_y - 2.4*cm, cout_day)
+            c.setFont("Helvetica", 7)
+            c.setFillColor(colors.HexColor('#6b6b6b'))
+            c.drawCentredString(0.5*cm + 3 * (page_width - 1*cm) / 8, dates_y - 2.7*cm, "⏰ until 11:00")
+            
+            # Nights
+            c.setFillColor(colors.HexColor('#003580'))
+            c.setFont("Helvetica-Bold", 18)
+            c.drawCentredString(0.5*cm + 5 * (page_width - 1*cm) / 8, dates_y - 1.6*cm, str(nights))
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica", 9)
+            c.drawCentredString(0.5*cm + 5 * (page_width - 1*cm) / 8, dates_y - 2*cm, f"/ {nights}")
+            
+            # Guests
+            c.setFillColor(colors.HexColor('#003580'))
+            c.setFont("Helvetica-Bold", 18)
+            c.drawCentredString(0.5*cm + 7 * (page_width - 1*cm) / 8, dates_y - 1.6*cm, "1")
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica", 9)
+            c.drawCentredString(0.5*cm + 7 * (page_width - 1*cm) / 8, dates_y - 2*cm, "/ 14")
+            
+            # === PRICE SECTION ===
+            price_y = dates_y - 4*cm
+            
             c.setFillColor(colors.black)
             c.setFont("Helvetica-Bold", 11)
-            c.drawString(1.5*cm, room_y, "Room Details")
+            c.drawString(0.5*cm, price_y, "PRICE")
+            
+            # Price breakdown box
+            c.setStrokeColor(colors.HexColor('#e0e0e0'))
+            c.setLineWidth(0.5)
+            c.rect(0.5*cm, price_y - 2.5*cm, page_width - 1*cm, 2.5*cm, fill=False, stroke=True)
             
             c.setFont("Helvetica", 9)
-            c.drawString(1.5*cm, room_y - 0.6*cm, f"• {room_type}")
-            c.drawString(1.5*cm, room_y - 0.95*cm, f"• Free WiFi")
-            c.drawString(1.5*cm, room_y - 1.3*cm, f"• Private bathroom")
-            c.drawString(1.5*cm, room_y - 1.65*cm, f"• Breakfast included")
+            c.setFillColor(colors.black)
+            c.drawString(1*cm, price_y - 0.7*cm, "1 dormitory bed")
+            c.drawRightString(page_width - 1.5*cm, price_y - 0.7*cm, f"BDT {base_price:,}")
             
-            # === GUEST INFORMATION ===
-            guest_y = room_y - 3*cm
+            c.drawString(1*cm, price_y - 1.1*cm, "11 % VAT")
+            c.drawRightString(page_width - 1.5*cm, price_y - 1.1*cm, f"BDT {vat_amount:,}")
+            
+            c.drawString(1*cm, price_y - 1.5*cm, "BDT 1,004")
+            
+            # Price section (for 1 guest)
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(1*cm, price_y - 1.9*cm, "Price")
+            c.setFont("Helvetica", 9)
+            c.drawString(1*cm, price_y - 2.2*cm, "(for 1 guest)")
+            
             c.setFont("Helvetica-Bold", 11)
-            c.drawString(1.5*cm, guest_y, "Guest Information")
+            c.setFillColor(colors.HexColor('#003580'))
+            c.drawRightString(page_width - 1.5*cm, price_y - 2*cm, f"approx. BDT {bdt_approx:,}")
+            c.setFont("Helvetica", 8)
+            c.setFillColor(colors.HexColor('#6b6b6b'))
+            c.drawRightString(page_width - 1.5*cm, price_y - 2.3*cm, "$ 730.40")
+            
+            # === ADDITIONAL INFORMATION SECTION ===
+            add_info_y = price_y - 4*cm
+            
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(0.5*cm, add_info_y, "Additional information")
             
             c.setFont("Helvetica", 9)
-            c.drawString(1.5*cm, guest_y - 0.6*cm, f"Name: {guest_name or 'N/A'}")
-            c.drawString(1.5*cm, guest_y - 0.95*cm, f"Number of guests: 1 adult")
+            add_info_text = [
+                "Please note that additional supplements (e.g. extra bed) are not added in this total.",
+                "",
+                "If an applicable city or tourist tax exists, this property bills it separately and directly to you.",
+                "",
+                "If you don't show up at this booking, and you don't cancel beforehand, the property is liable to charge you the full reservation amount.",
+                "Please remember to read the important information below, which contains important details not mentioned here."
+            ]
             
-            # === ADDITIONAL INFORMATION (Styled box) ===
-            additional_y = guest_y - 2.5*cm
+            y_add = add_info_y - 0.6*cm
+            for line in add_info_text:
+                c.drawString(0.5*cm, y_add, line)
+                y_add -= 0.35*cm
             
-            c.setFillColor(colors.white)
+            # === MEAL PLAN SECTION ===
+            meal_y = y_add - 0.8*cm
+            
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(0.5*cm, meal_y, "Meal Plan:")
+            c.setFont("Helvetica", 9)
+            c.drawString(0.5*cm, meal_y - 0.5*cm, "There is no meal included in the rate for this dormitory bed.")
+            
+            c.setFont("Helvetica", 8)
+            c.setFillColor(colors.HexColor('#6b6b6b'))
+            c.drawString(0.5*cm, meal_y - 0.9*cm, "Shower: • Toilet • Linen • Socket near the bed • Shared bathroom • Bunk bed (double bunk bed)")
+            
+            c.setFont("Helvetica-Bold", 9)
+            c.setFillColor(colors.black)
+            c.drawString(0.5*cm, meal_y - 1.4*cm, "Bed Size(s): 1 bunk bed (variable size)")
+            
+            # Create new page for more content
+            c.showPage()
+            
+            # === PAGE 2: Important information, Hotel Policies, Need Help ===
+            
+            # === IMPORTANT INFORMATION ICON SECTION ===
+            info_icon_y = page_height - 2*cm
+            
             c.setStrokeColor(colors.HexColor('#003580'))
-            c.setLineWidth(1)
-            c.rect(1.5*cm, additional_y - 3*cm, 18*cm, 3*cm, fill=True, stroke=True)
+            c.setFillColor(colors.white)
+            c.setLineWidth(2)
+            c.circle(1.2*cm, info_icon_y, 0.35*cm, fill=True, stroke=True)
             
             c.setFillColor(colors.HexColor('#003580'))
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(2*cm, additional_y - 0.6*cm, "ℹ Important information")
+            c.setFont("Helvetica-Bold", 14)
+            c.drawCentredString(1.2*cm, info_icon_y - 0.15*cm, "i")
             
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(2*cm, info_icon_y - 0.1*cm, "Important information")
+            
+            # Important information text
+            c.setFont("Helvetica", 9)
             c.setFillColor(colors.black)
-            c.setFont("Helvetica", 8)
-            info_lines = [
-                "Changes to your name or arrival date may be subject to charges. Please inform 365 London Hostel in advance of your expected arrival",
-                "time. You can use the Special Requests box when booking, or contact the property directly using the contact details in your confirmation.",
-                "Please inform the property in advance if you have any special dietary requirements. According to the government bill, tourist tax is required.",
+            info_text = [
+                "When booking you can see different policies and additional supplements may apply.",
+                "",
+                "Please note that guests under 18 years old are not allowed in shared dormitories.",
+                "Guests are required to show a photo identification and credit card upon check-in.",
+                "Please note that all Special Requests are subject to availability and additional charges.",
+                "may apply. According to Icelandic Government regulations, all guests have to pay a",
+                "tourist tax on site. For cancellations made within 7 days before arrival, you will be 1",
+                "charged 100% of the booking. If cancelled within 30 days before arrival, you will be",
+                "charged 50% of the total.",
+                "",
+                "Please inform KEX Hostel and Hotel of your expected arrival time. You can",
+                "use the Special Requests box when booking, or contact the property directly using the",
+                "contact details provided in your confirmation.",
+                "",
                 "Guests under the age of 18 can only check in with a parent or official guardian."
             ]
             
-            for i, line in enumerate(info_lines):
-                c.drawString(2*cm, additional_y - 1.1*cm - (i * 0.35*cm), line)
+            y_info = info_icon_y - 0.8*cm
+            for line in info_text:
+                c.drawString(0.5*cm, y_info, line)
+                y_info -= 0.35*cm
             
-            # === PRICE BREAKDOWN (Bottom table) ===
-            price_table_y = additional_y - 5.5*cm
+            # === HOTEL POLICIES ICON SECTION ===
+            policies_y = y_info - 1.5*cm
             
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(1.5*cm, price_table_y, "Price Breakdown")
+            c.setStrokeColor(colors.HexColor('#003580'))
+            c.setFillColor(colors.white)
+            c.setLineWidth(2)
+            c.rect(0.8*cm, policies_y - 0.25*cm, 0.7*cm, 0.7*cm, fill=True, stroke=True)
             
-            # Table header
-            c.setFillColor(colors.HexColor('#f5f5f5'))
-            c.rect(1.5*cm, price_table_y - 1.5*cm, 18*cm, 0.6*cm, fill=True, stroke=False)
+            c.setFillColor(colors.HexColor('#003580'))
+            c.setFont("Helvetica-Bold", 18)
+            c.drawCentredString(1.15*cm, policies_y - 0.05*cm, "≡")
             
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(2*cm, policies_y, "Hotel Policies")
+            
+            # Hotel policies text
+            c.setFont("Helvetica-Bold", 10)
             c.setFillColor(colors.black)
-            c.setFont("Helvetica-Bold", 9)
-            c.drawString(2*cm, price_table_y - 1.1*cm, f"{nights} nights (including taxes & fees)")
-            c.drawRightString(18.5*cm, price_table_y - 1.1*cm, f"EUR {total_price}")
+            c.drawString(0.5*cm, policies_y - 0.8*cm, "Guest parking")
             
-            # Total Price
+            c.setFont("Helvetica", 9)
+            policies_text = [
+                "• Public parking is possible at a location nearby (reservation is not possible) and",
+                "  costs $ 1 per hour.",
+                ""
+            ]
+            
+            y_policies = policies_y - 1.2*cm
+            for line in policies_text:
+                c.drawString(0.5*cm, y_policies, line)
+                y_policies -= 0.35*cm
+            
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(0.5*cm, y_policies, "Wi-Fi")
+            y_policies -= 0.4*cm
+            
+            c.setFont("Helvetica", 9)
+            c.drawString(0.5*cm, y_policies, "• Wi-Fi is available in all areas and is free of charge.")
+            y_policies -= 0.7*cm
+            
+            # === NEED HELP ICON SECTION ===
+            help_y = y_policies - 1*cm
+            
+            c.setStrokeColor(colors.HexColor('#003580'))
+            c.setFillColor(colors.white)
+            c.setLineWidth(2)
+            c.circle(1.2*cm, help_y, 0.35*cm, fill=True, stroke=True)
+            
             c.setFillColor(colors.HexColor('#003580'))
             c.setFont("Helvetica-Bold", 12)
-            c.drawString(2*cm, price_table_y - 2*cm, "Total Price:")
-            c.drawRightString(18.5*cm, price_table_y - 2*cm, f"EUR {total_price}")
+            c.drawCentredString(1.2*cm, help_y - 0.12*cm, "?")
             
-            # === YELLOW INFO BOX ===
-            yellow_y = price_table_y - 3.5*cm
-            c.setFillColor(colors.HexColor('#fef3cd'))
-            c.rect(1.5*cm, yellow_y - 1*cm, 18*cm, 1*cm, fill=True, stroke=False)
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(2*cm, help_y - 0.1*cm, "Need help?")
             
-            c.setFillColor(colors.HexColor('#856404'))
-            c.setFont("Helvetica-Bold", 9)
-            c.drawString(2*cm, yellow_y - 0.4*cm, "Important Information")
-            c.setFont("Helvetica", 8)
-            c.drawString(2*cm, yellow_y - 0.75*cm, "• Please bring your passport and confirmation number at check-in")
+            c.setFont("Helvetica-Bold", 10)
+            c.setFillColor(colors.black)
+            c.drawString(0.5*cm, help_y - 0.7*cm, "You can always view, change or cancel your booking online at: your.booking.com")
             
-            # === FOOTER ===
+            c.setFont("Helvetica", 9)
+            help_text = [
+                "For any questions related to the property, you can contact KEX Hostel and Hotel",
+                "directly at +35486311963 or email them at reception@travelbugvietnam.com",
+                "",
+                "Or contact us by phone - we're available 24 hours a day",
+                "When abroad, dial: +44 20 3320 2609",
+                "",
+                "Find more information about travelling safely on our SafeStay resource centre.",
+                "Your SafeStay is our top concern. In case of an emergency while on holiday, dial 112 to",
+                "reach police, fire brigade, or emergency medical services. This number works in",
+                "most European countries and is free of charge.",
+                ""
+            ]
+            
+            y_help = help_y - 1.2*cm
+            for line in help_text:
+                c.drawString(0.5*cm, y_help, line)
+                y_help -= 0.35*cm
+            
+            # Add SafeStay link
+            c.setFillColor(colors.HexColor('#0071c2'))
+            c.setFont("Helvetica", 9)
+            c.drawString(0.5*cm, y_help, "SafeStay: Find more information about travelling safely helping you to complete peace of mind")
+            y_help -= 0.35*cm
+            c.drawString(0.5*cm, y_help, "during your stay in Iceland.")
+            y_help -= 0.7*cm
+            
+            # === FOOTER DISCLAIMER ===
+            c.setFillColor(colors.HexColor('#6b6b6b'))
             c.setFont("Helvetica", 7)
-            c.setFillColor(colors.HexColor('#666666'))
-            c.drawCentredString(page_width/2, 2*cm, "This is your booking confirmation. Please print and present at check-in.")
-            c.drawCentredString(page_width/2, 1.6*cm, f"Booking reference: {confirmation_no} | Generated: {datetime.now().strftime('%d %B %Y')}")
+            footer_text = [
+                "⚠ This print version of your confirmation contains the most important information about your booking. It can be used to check in when you arrive at KEX Hostel and Hotel. For further details please",
+                "refer to your confirmation email sent to travelbugvietnam@gmail.com."
+            ]
+            
+            y_footer = 2.5*cm
+            for line in footer_text:
+                c.drawCentredString(page_width / 2, y_footer, line)
+                y_footer -= 0.3*cm
             
             c.save()
             
