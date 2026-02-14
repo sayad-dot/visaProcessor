@@ -5,6 +5,7 @@ Uses ReportLab for professional PDF generation and Gemini for intelligent conten
 import os
 import io
 import re
+import random
 import requests
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
@@ -3350,8 +3351,8 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
             name = self._get_value('passport_copy.full_name', 'nid_bangla.name_english', 'tin_certificate.taxpayer_name', 'personal.full_name') or 'NAME'
             tin = self._get_value('tin_certificate.tin_number', 'tax.tin_number', 'tin_number')
             if not tin:
-                # Generate realistic TIN format: 123-456-789-1234
-                tin = f'{random.randint(100,999)}-{random.randint(100,999)}-{random.randint(100,999)}-{random.randint(1000,9999)}'
+                # Generate realistic TIN format like real eReturn: 582043476249 (12 continuous digits)
+                tin = f'{hash(name) % 900000000000 + 100000000000}'
             
             father_name = self._get_value('father_name', 'personal.father_name', 'nid_bangla.father_name') or "Father's Name"
             mother_name = self._get_value('mother_name', 'personal.mother_name', 'nid_bangla.mother_name') or "Mother's Name"
@@ -3413,6 +3414,12 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
             c = pdf_canvas.Canvas(file_path, pagesize=A4)
             width, height = A4
             
+            # eReturn branding at top right
+            c.setFont('Helvetica-Bold', 18)
+            c.setFillColor(colors.HexColor('#00a651'))  # eReturn green
+            c.drawRightString(width - 50, height - 40, "eReturn")
+            c.setFillColor(colors.black)
+            
             # Load Bangladesh government logo
             logo_path = "/media/sayad/Ubuntu-Data/visa/assets/bdlogi.png"
             if os.path.exists(logo_path):
@@ -3452,8 +3459,8 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
             
             c.setFillColor(colors.black)
             
-            # Reference number (top right)
-            ref_no = f"Ref: TAX/{assessment_year}/NBR/{random.randint(1000,9999)}"
+            # Reference number (top right) - use hash for consistency
+            ref_no = f"Reference Number: {abs(hash(f'{name}{tin}')) % 10000000000}"
             c.setFont('Helvetica', 9)
             c.drawRightString(width - 50, height - 50, ref_no)
             c.drawRightString(width - 50, height - 63, f"Date: {datetime.now().strftime('%d/%m/%Y')}")
@@ -3466,28 +3473,33 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
             
             c.setFont('Helvetica', 10)
             
-            # Taxpayer Name
-            c.drawString(left_margin, y, "Taxpayer Name:")
+            # Taxpayer's Name
+            c.drawString(left_margin, y, "Taxpayer's Name")
+            c.drawString(left_margin + 170, y, ":")
             c.setFont('Helvetica-Bold', 10)
             c.drawString(value_x, y, name)
             c.setFont('Helvetica', 10)
             
             y -= line_height
-            c.drawString(left_margin, y, "TIN:")
+            c.drawString(left_margin, y, "Taxpayer's Identification Number (TIN)")
+            c.drawString(left_margin + 170, y, ":")
             c.setFont('Helvetica-Bold', 10)
             c.drawString(value_x, y, tin)
             c.setFont('Helvetica', 10)
             
             y -= line_height
-            c.drawString(left_margin, y, "Father's Name:")
+            c.drawString(left_margin, y, "Father's Name")
+            c.drawString(left_margin + 170, y, ":")
             c.drawString(value_x, y, father_name)
             
             y -= line_height
-            c.drawString(left_margin, y, "Mother's Name:")
+            c.drawString(left_margin, y, "Mother's Name")
+            c.drawString(left_margin + 170, y, ":")
             c.drawString(value_x, y, mother_name)
             
             y -= line_height
-            c.drawString(left_margin, y, "Current Address:")
+            c.drawString(left_margin, y, "Current Address")
+            c.drawString(left_margin + 170, y, ":")
             # Wrap address if too long
             if len(present_address) > 50:
                 c.drawString(value_x, y, present_address[:50])
@@ -3497,7 +3509,8 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
                 c.drawString(value_x, y, present_address)
             
             y -= line_height
-            c.drawString(left_margin, y, "Permanent Address:")
+            c.drawString(left_margin, y, "Permanent Address")
+            c.drawString(left_margin + 170, y, ":")
             if len(permanent_address) > 50:
                 c.drawString(value_x, y, permanent_address[:50])
                 y -= 12
@@ -3506,7 +3519,8 @@ Total word count: 950-1200 words (COUNT CAREFULLY - this fills 1.5-2 pages exact
                 c.drawString(value_x, y, permanent_address)
             
             y -= line_height
-            c.drawString(left_margin, y, "Status:")
+            c.drawString(left_margin, y, "Status")
+            c.drawString(left_margin + 170, y, ":")
             c.drawString(value_x, y, "Individual -> Bangladesh -> Having NID")
             
             # Financial details section
