@@ -422,222 +422,238 @@ class PDFGeneratorService:
     # ============================================================================
     
     def generate_cover_letter(self) -> str:
-        """Generate formal cover letter to Embassy of Iceland"""
-        import json
+        """Generate formal cover letter to Embassy of Iceland - NEW STRUCTURED FORMAT"""
         doc_record = self._create_document_record("cover_letter", "Cover_Letter.pdf")
         file_path = doc_record.file_path
         
         try:
             self._update_progress(doc_record, 10)
 
-            # 1. Collect all data with enhanced priority
-            # Get bank accounts for financial summary
+            # 1. Collect all required data
             banks = self._get_banks()
             total_balance = sum(float(bank.get('balance', 0)) for bank in banks) if banks else 0
             
-            applicant_data = {
-                "name": self._get_value('full_name', 'passport_copy.full_name', 'nid_bangla.name_english'),
-                "passport": self._get_value('passport_number', 'passport_copy.passport_number'),
-                "profession": self._get_value('job_title', 'employment.job_title', 'business_type', 'business.business_type'),
-                "company": self._get_value('company_name', 'employment.company_name', 'business.business_name'),
-                "purpose": self._get_value('travel_purpose', 'travel.purpose', 'purpose') or 'Tourism and exploring Iceland',
-                "travel_dates": self._get_value('arrival_date', 'travel.arrival_date', 'hotel_booking.check_in_date') or 'Planned dates',
-                "places": self._get_value('places_to_visit', 'travel.places', 'hotel_booking.hotel_location') or 'Reykjavik, Golden Circle, Blue Lagoon',
-                "income": self._get_value('annual_income', 'monthly_income', 'financial.annual_income'),
-                "bank_balance": f"BDT {total_balance:,.0f}" if total_balance > 0 else self._get_value('bank_solvency.current_balance'),
-                "family_ties": self._get_value('spouse_name', 'number_of_children', 'personal.marital_status') or 'Family in Bangladesh',
-                "property_ties": self._get_value('asset_valuation.total_value', 'assets.property_description') or 'Property ownership',
-                "reasons_to_return": self._get_value('reasons_to_return', 'home_ties.reasons_to_return') or 'Family, business, and property responsibilities in Bangladesh'
-            }
+            # Personal data
+            name = self._get_value('full_name', 'passport_copy.full_name', 'nid_bangla.name_english') or 'Applicant Name'
+            passport = self._get_value('passport_number', 'passport_copy.passport_number') or 'A00000000'
+            dob = self._get_value('date_of_birth', 'passport_copy.date_of_birth', 'nid_bangla.date_of_birth') or '01 Jan 1990'
+            address = self._get_value('current_address', 'bank_solvency.current_address', 'nid_bangla.address_bangla') or 'Dhaka, Bangladesh'
+            mobile = self._get_value('phone', 'contact.phone', 'personal.phone') or '+880XXXXXXXXXX'
+            email = self._get_value('email', 'contact.email', 'personal.email') or 'email@example.com'
             
-            # Get applicant type info (job holder vs business owner)
+            # Employment/Business data
             type_info = self._get_applicant_type_info()
-            profession_desc = type_info['profession_desc']
-            work_tie_desc = type_info['work_tie_desc']
-            occupation_intro = type_info['occupation_intro']
+            is_job_holder = type_info['is_job_holder']
+            occupation = self._get_value('job_title', 'employment.job_title') if is_job_holder else 'Business Owner'
+            if not occupation or occupation == 'N/A':
+                occupation = self._get_value('business_type', 'business.business_type') or 'Entrepreneur'
+            company = self._get_value('company_name', 'employment.company_name', 'business.business_name') or 'Company Name'
+            company_address = self._get_value('company_address', 'employment.company_address', 'business.business_address') or 'Dhaka, Bangladesh'
+            monthly_income = self._get_value('monthly_income', 'financial.monthly_income', 'employment.monthly_salary')
             
-            self._update_progress(doc_record, 20)
-
-            # 2. Few-shot example from OCR'd PDF
-            sample_cover_letter = """
-            Subject: Request for a visitor visa application for the United Kingdom.
+            # Travel data
+            arrival_date = self._get_value('arrival_date', 'travel.arrival_date', 'hotel_booking.check_in_date') or '01 May 2026'
+            departure_date = self._get_value('departure_date', 'travel.departure_date', 'hotel_booking.check_out_date') or '15 May 2026'
+            places = self._get_value('places_to_visit', 'travel.places', 'hotel_booking.hotel_location') or 'Reykjavik'
+            hotel_name = self._get_value('hotel_booking.hotel_name', 'accommodation_name') or 'Hotel in Iceland'
             
-            Dear Respected Sir,
+            # Leave dates (for job holders)
+            leave_from = self._get_value('leave_from_date', 'employment.leave_start_date') or arrival_date
+            leave_to = self._get_value('leave_to_date', 'employment.leave_end_date') or departure_date
             
-            I am Md Swapon Sheikh a business proprietor. I intend to visit United Kingdom to experience its renowned natural beauty, explore its rich cultural heritage, and hopefully, this trip will create outstanding memories. I am so excited that I have prepared all my papers and documents according to United Kingdom immigration procedures.
+            # Travel history
+            previous_travels = self._get_previous_travels()
+            travel_history_text = ", ".join([t.get('country', 'N/A') for t in previous_travels[:3]]) if previous_travels else "N/A"
             
-            I am Md Swapon Sheikh I am the applicant and a Bangladeshi citizen, holding passport number A04907327. United Kingdom has always been my dream country as a tourist destination. So now, I am writing to formally submit my application for a tourist visa to UNITED KINGDOM. I have fulfilled all the requirements outlined by United Kingdom immigration. Now I am currently a Proprietor. My company name is “SHEIKH ONLINE SERVICE” and I am the founder of my business. So, all the employees of my company are dependent on me, according to my family members. Additionally, I have attached all the proven documents with this application and providing all the information about my Family Member.
-            
-            NOTE: My previous application GWF084177219 was refused because my business and financial details were not clearly shown. In this reapplication, I have provided complete and clear documents to fully address those concerns.
-            
-            Purpose of Travel:
-            I am a Businessman and I wish to visit the United Kingdom for tourism and short recreational travel. I plan to stay in London from 29 December 2025 to 12 January 2026 to enjoy a refreshing break from my regular business activities. During my stay, I intend to explore major tourist attractions such as Big Ben, Tower Bridge, Buckingham Palace, the British Museum, the London Eye, Hyde Park, Oxford Street, and other cultural and historical sites. I also wish to enjoy the festive atmosphere of New Year's Eve on 31 December 2025 in London. This is a personal holiday trip, and after completing my visit, I will return to Bangladesh on the scheduled date to resume my business responsibilities.
-            
-            Financial Stand and Trip Funds:
-            I am sharing my bank statements here so you can demonstrate my financial ability to cover all expenses associated with this trip. My accounts reflect the following balances...
-            
-            Business and Job Ties:
-            I, MD Swapon Sheikh, am a businessman and the proprietor of Sheikh Online Service, a small Internet service business located at 706, Moddo Naya Nagar, Vatara, Dhaka-1212. I am fully responsible for managing daily operations, customer services, and business development. My regular presence is required for the smooth running of the business, and I must return to Bangladesh after my trip to continue supervising my work and maintaining my client commitments. These ongoing responsibilities firmly establish my strong business ties to Bangladesh.
-            
-            I have a Strong Travel History of compliance with international travel regulations, having previously visited...
-            
-            I respectfully request your favorable consideration of my application and remain available to provide any additional information or documentation as needed. I sincerely look forward to this visit and greatly appreciate your time and attention to my application. Thank you for your understanding and support. I remain at your disposal for any further inquiries.
+            self._update_progress(doc_record, 30)
 
-            Yours faithfully,
-            MD SWAPON SHEIKH
-            """
-
-            # 3. Construct the new, advanced prompt - EXPANDED FOR 2 PAGES
-            prompt = f"""
-            You are an expert visa application consultant, specializing in crafting compelling cover letters for Iceland Embassy Schengen visa applications. Your task is to write a professional and persuasive cover letter that fills EXACTLY 2 FULL PAGES.
-
-            **Analysis of a High-Quality Sample Letter:**
-            Here is an example of a good cover letter. Notice its structure, tone, and the way it clearly presents information and addresses potential concerns.
-            ---
-            [GOOD EXAMPLE START]
-            {sample_cover_letter}
-            [GOOD EXAMPLE END]
-            ---
-
-            **Applicant's Profile:**
-            Now, analyze the following data for the current applicant.
-            - Name: {applicant_data['name']}
-            - Passport: {applicant_data['passport']}
-            - Profession: {applicant_data['profession']} at {applicant_data['company']}
-            - Purpose of Visit: {applicant_data['purpose']}
-            - Proposed Travel Dates: {applicant_data['travel_dates']}
-            - Planned locations: {applicant_data['places']}
-            - Financials: Annual income of {applicant_data['income']}, with {applicant_data['bank_balance']} in the bank.
-            - Home Ties (Family): {applicant_data['family_ties']}
-            - Home Ties (Assets): Owns {applicant_data['property_ties']}
-            - Stated Reason to Return: {applicant_data['reasons_to_return']}
-
-            **Your Task: Generate a New Cover Letter for Iceland Embassy**
-            Based on the applicant's profile, write a new cover letter that follows Iceland Embassy expectations.
-
-            **CRITICAL REQUIREMENTS:**
-            - Length: MUST be 1600-1800 words to fill EXACTLY 2 FULL PAGES
-            - Tone: Use simple, school-grade English (10th-12th grade level) - clear and conversational but professional
-            - Format: Follow how Iceland Embassy wants cover letters structured
-            - Content: Be detailed, specific, and convincing
-
-            **Instructions:**
-            1.  **Structure and Content:** The letter must be formal and structured into 7-8 SUBSTANTIAL paragraphs:
-                *   **Paragraph 1: Introduction (120-150 words):** Introduce yourself - "{applicant_data['name']}", passport number {applicant_data['passport']}, {occupation_intro}. State the purpose of the letter (applying for an Iceland tourist visa for specific dates). Mention excitement about visiting Iceland.
-                
-                *   **Paragraph 2: About Iceland and Why Visit (200-250 words):** Express genuine interest in Iceland. Mention specific attractions like Reykjavik, Golden Circle, Blue Lagoon, Northern Lights, waterfalls, glaciers. Explain WHY you want to visit Iceland specifically (natural beauty, unique culture, safe country, etc.). Show you've researched Iceland.
-                
-                *   **Paragraph 3: Detailed Travel Plans (200-250 words):** Elaborate on travel dates, duration of stay, detailed itinerary. Mention which cities/regions you'll visit, what activities you plan (sightseeing, photography, nature exploration). Include accommodation plans, transportation arrangements. Be specific and organized.
-                
-                *   **Paragraph 4: Financial Capacity - Part 1 (180-200 words):** State that you will self-fund your entire trip. Mention your profession, monthly/annual income. Explain that you have sufficient savings to cover all costs (flights, accommodation, food, activities, insurance). Reference your bank balance ({applicant_data['bank_balance']}) and that bank statements are attached.
-                
-                *   **Paragraph 5: Financial Capacity - Part 2 (180-200 words):** Provide MORE financial details. Mention if you have multiple bank accounts. Talk about your financial stability over time. Mention that you understand trip costs and have budgeted accordingly. Reference any credit cards or additional financial resources. Emphasize you won't be a burden to Iceland.
-                
-                *   **Paragraph 6: {profession_desc.title()} Ties (200-220 words):** {work_tie_desc} Explain your role, daily responsibilities, why you're important to the organization. Include specific details about the company, how long you've been there, future projects/plans requiring your presence. Make it clear that your return is essential.
-                
-                *   **Paragraph 7: Family and Property Ties (200-220 words):** Elaborate on family members in Bangladesh (parents, spouse, children). Mention any property you own (house, land, apartments). Explain your emotional and financial connections to Bangladesh. Talk about family responsibilities, cultural ties, social connections. Make it clear you have STRONG reasons to return.
-                
-                *   **Paragraph 8: Conclusion (180-200 words):** Summarize key points: tourism purpose, self-funded, strong ties to Bangladesh, will return. Express gratitude for considering your application. Mention you're available for interview or additional documents. State you will respect all Schengen visa rules. End with respectful closing.
-
-            2.  **Tone and Language Rules:**
-                - Use simple, clear English (school-grade level - NOT overly formal or complex)
-                - Write like you're explaining to a person face-to-face
-                - Be confident but humble
-                - Sound genuine and honest (not robotic or template-like)
-                - Use first person ("I", "my", "I am")
-                - Avoid overly emotional language or begging
-                - Be professional but warm
-
-            3.  **Output Format:** Structure your response as a JSON object with the following keys:
-                *   `"subject"`: A string for the subject line of the letter.
-                *   `"greeting"`: A string for the salutation (e.g., "Dear Visa Officer,").
-                *   `"body"`: An array of strings, where each string is a paragraph of the letter's body. MUST have 7-8 paragraphs, each 180-250 words.
-                *   `"closing"`: A string for the closing remark (e.g., "Sincerely,").
-                *   `"signature"`: A string for the applicant's name.
-
-            **Example JSON output:**
-            {{
-              "subject": "Application for Schengen Tourist Visa to Iceland",
-              "greeting": "Dear Sir or Madam,",
-              "body": [
-                "Paragraph 1: Introduction (120-150 words)...",
-                "Paragraph 2: About Iceland (200-250 words)...",
-                "Paragraph 3: Travel Plans (200-250 words)...",
-                "Paragraph 4: Financial Part 1 (180-200 words)...",
-                "Paragraph 5: Financial Part 2 (180-200 words)...",
-                "Paragraph 6: Job Ties (200-220 words)...",
-                "Paragraph 7: Family Ties (200-220 words)...",
-                "Paragraph 8: Conclusion (180-200 words)..."
-              ],
-              "closing": "Yours faithfully,",
-              "signature": "{applicant_data['name']}"
-            }}
-
-            Now, generate the JSON for the new cover letter.
-            """
-            
-            self._update_progress(doc_record, 40)
-            ai_response_text = self._generate_content_with_ai(prompt)
-            self._update_progress(doc_record, 70)
-
-            # 4. Parse the AI's JSON response
-            try:
-                # Clean the response to extract only the JSON part
-                json_str = ai_response_text.strip()
-                if json_str.startswith('```json'):
-                    json_str = json_str[7:]
-                if json_str.endswith('```'):
-                    json_str = json_str[:-3]
-                
-                letter_data = json.loads(json_str)
-                letter_content = "\n\n".join(letter_data.get('body', []))
-                subject_text = f"<b>Subject: {letter_data.get('subject', 'Application for Schengen Tourist Visa')}</b>"
-            except (json.JSONDecodeError, KeyError) as e:
-                # Fallback to old method if JSON fails
-                letter_content = ai_response_text
-                subject_text = "<b>Subject: Application for Schengen Tourist Visa</b>"
-
-            self._update_progress(doc_record, 80)
-
-            # 5. Create PDF with the generated content
+            # 2. Create PDF with structured format matching the template
             pdf = SimpleDocTemplate(file_path, pagesize=A4,
-                                   topMargin=1*inch, bottomMargin=1*inch,
-                                   leftMargin=1*inch, rightMargin=1*inch)
+                                   topMargin=0.75*inch, bottomMargin=0.75*inch,
+                                   leftMargin=0.75*inch, rightMargin=0.75*inch)
             
             styles = getSampleStyleSheet()
             story = []
             
-            body_style = ParagraphStyle(
-                'CustomBody',
-                parent=styles['BodyText'],
+            # Custom styles
+            title_style = ParagraphStyle(
+                'Title',
+                parent=styles['Heading1'],
+                fontSize=16,
+                leading=20,
+                alignment=TA_CENTER,
+                fontName='Helvetica-Bold',
+                spaceAfter=12
+            )
+            
+            header_style = ParagraphStyle(
+                'Header',
+                parent=styles['Normal'],
+                fontSize=10,
+                leading=14,
+                alignment=TA_LEFT,
+                fontName='Helvetica'
+            )
+            
+            section_header_style = ParagraphStyle(
+                'SectionHeader',
+                parent=styles['Heading2'],
                 fontSize=11,
-                leading=16,
+                leading=14,
+                fontName='Helvetica-Bold',
+                spaceAfter=6,
+                spaceBefore=12
+            )
+            
+            body_style = ParagraphStyle(
+                'Body',
+                parent=styles['BodyText'],
+                fontSize=10,
+                leading=14,
                 alignment=TA_JUSTIFY,
                 fontName='Helvetica'
             )
             
+            bullet_style = ParagraphStyle(
+                'Bullet',
+                parent=styles['BodyText'],
+                fontSize=10,
+                leading=14,
+                leftIndent=20,
+                fontName='Helvetica',
+                bulletIndent=10
+            )
+            
+            self._update_progress(doc_record, 50)
+            
+            # === DOCUMENT HEADER ===
+            story.append(Paragraph("<b>COVER LETTER</b>", title_style))
+            story.append(Spacer(1, 0.1*inch))
+            
+            # Applicant info header
+            story.append(Paragraph(f"<b>Applicant:</b> {name}", header_style))
+            story.append(Paragraph(f"<b>Passport No.:</b> {passport}", header_style))
+            story.append(Paragraph(f"<b>Date:</b> {datetime.now().strftime('%d %b %Y')}", header_style))
             story.append(Spacer(1, 0.2*inch))
-            date_text = f"<b>Date:</b> {datetime.now().strftime('%B %d, %Y')}"
-            story.append(Paragraph(date_text, body_style))
+            
+            # TO section
+            story.append(Paragraph("<b>TO</b>", header_style))
+            story.append(Paragraph("The Visa Officer", body_style))
+            story.append(Paragraph("Embassy of the Kingdom of Iceland/VFS Dhaka,", body_style))
+            story.append(Paragraph("Bangladesh", body_style))
+            story.append(Spacer(1, 0.2*inch))
+            
+            # Subject
+            story.append(Paragraph("<b>Subject: Application for Short-Stay Schengen Tourist Visa</b>", body_style))
+            story.append(Spacer(1, 0.15*inch))
+            
+            # Greeting
+            story.append(Paragraph("Dear Sir/Madam,", body_style))
+            story.append(Spacer(1, 0.1*inch))
+            
+            # Opening paragraph
+            opening_text = f"I, {name}, holder of Bangladesh Passport No. {passport}, respectfully submit my application for a short-stay Schengen (tourist) visa to visit Iceland."
+            story.append(Paragraph(opening_text, body_style))
+            story.append(Spacer(1, 0.1*inch))
+            
+            travel_text = f"I intend to travel for tourism purposes from {arrival_date} to {departure_date}. During my stay, I plan to explore the cultural and historical attractions of Iceland, mainly in {places}. I will be staying at {hotel_name}."
+            story.append(Paragraph(travel_text, body_style))
+            story.append(Spacer(1, 0.15*inch))
+            
+            self._update_progress(doc_record, 65)
+            
+            # === PERSONAL & EMPLOYMENT INFORMATION SECTION ===
+            story.append(Paragraph("<b>Personal &amp; Employment Information:</b>", section_header_style))
+            
+            bullet_items = [
+                f"<b>Full Name:</b> {name}",
+                f"<b>Date of Birth:</b> {dob}",
+                f"<b>Address:</b> {address}",
+                f"<b>Mobile:</b> {mobile}",
+                f"<b>Email:</b> {email}",
+                f"<b>Occupation:</b> {occupation}",
+                f"<b>Employer:</b> {company}, {company_address}",
+            ]
+            
+            if monthly_income:
+                bullet_items.append(f"<b>Monthly Income:</b> BDT {monthly_income}")
+            
+            if is_job_holder:
+                bullet_items.append(f"My employer has granted official leave from {leave_from} to {leave_to}, and I will return to work immediately after my trip.")
+            else:
+                bullet_items.append(f"As a business owner, I have arranged for temporary management during my absence and will return to resume operations.")
+            
+            for item in bullet_items:
+                story.append(Paragraph(f"• {item}", bullet_style))
+            
+            story.append(Spacer(1, 0.15*inch))
+            
+            # === FINANCIAL & TRAVEL DETAILS SECTION ===
+            story.append(Paragraph("<b>Financial &amp; Travel Details:</b>", section_header_style))
+            
+            financial_text = f"This trip is entirely self-financed. I have attached proof of financial stability, including bank statements"
+            if monthly_income:
+                financial_text += ", salary documents"
+            financial_text += ", and supporting records."
+            
+            if total_balance > 0:
+                financial_text += f" My current bank balance totals BDT {total_balance:,.0f}, which is sufficient to cover all travel expenses."
+            
+            story.append(Paragraph(financial_text, body_style))
+            story.append(Spacer(1, 0.1*inch))
+            
+            if travel_history_text != "N/A":
+                travel_history_para = f"I have previously traveled to {travel_history_text}, demonstrating my compliance with international travel regulations."
+                story.append(Paragraph(travel_history_para, body_style))
+            
+            story.append(Spacer(1, 0.15*inch))
+            
+            # === REASON TO RETURN SECTION ===
+            story.append(Paragraph("<b>Reason to Return to Bangladesh:</b>", section_header_style))
+            story.append(Paragraph("I have strong ties to Bangladesh, including:", body_style))
+            story.append(Spacer(1, 0.05*inch))
+            
+            return_reasons = []
+            if is_job_holder:
+                return_reasons.append("A stable full-time job")
+            else:
+                return_reasons.append("An established business requiring my management")
+            
+            return_reasons.extend([
+                "Family responsibilities",
+                "Personal assets and long-term commitments"
+            ])
+            
+            for reason in return_reasons:
+                story.append(Paragraph(f"• {reason},", bullet_style))
+            
+            story.append(Spacer(1, 0.1*inch))
+            story.append(Paragraph("These ensure that I will return to Bangladesh within the permitted period.", body_style))
+            story.append(Spacer(1, 0.15*inch))
+            
+            self._update_progress(doc_record, 80)
+            
+            # === COMMITMENT SECTION ===
+            story.append(Paragraph("<b>Commitment</b>", section_header_style))
+            commitment_text = f"I fully understand the visa conditions and assure you that I will abide by all the rules of the Schengen area. I will return to Bangladesh on or before {departure_date}."
+            story.append(Paragraph(commitment_text, body_style))
+            story.append(Spacer(1, 0.1*inch))
+            
+            # Closing
+            closing_text = "I kindly request you to consider my application and grant me a Schengen tourist visa."
+            story.append(Paragraph(closing_text, body_style))
+            story.append(Spacer(1, 0.1*inch))
+            story.append(Paragraph("Thank you for your time and kind consideration.", body_style))
             story.append(Spacer(1, 0.3*inch))
             
-            to_text = """<b>To,</b><br/>
-The Embassy of Iceland<br/>
-House 16, Road 113/A<br/>
-Gulshan 2, Dhaka 1212<br/>
-Bangladesh"""
-            story.append(Paragraph(to_text, body_style))
+            # Signature block
+            story.append(Paragraph("<b>Sincerely,</b>", body_style))
             story.append(Spacer(1, 0.3*inch))
             
-            story.append(Paragraph(subject_text, body_style))
-            story.append(Spacer(1, 0.3*inch))
-            
-            # Use parsed content
-            paragraphs = letter_content.split('\n\n')
-            for para in paragraphs:
-                if para.strip():
-                    story.append(Paragraph(para.strip(), body_style))
-                    story.append(Spacer(1, 0.15*inch))
+            story.append(Paragraph(f"<b>{name}</b>", body_style))
+            story.append(Paragraph(address, body_style))
+            story.append(Paragraph(f"Mobile: {mobile}", body_style))
+            story.append(Paragraph(f"Email: {email}", body_style))
             
             # Build PDF
             pdf.build(story)
@@ -653,11 +669,7 @@ Bangladesh"""
             doc_record.status = GenerationStatus.FAILED
             self.db.commit()
             raise
-    
-    # ============================================================================
-    # 2. NID ENGLISH TRANSLATION
-    # ============================================================================
-    
+
     def generate_nid_translation(self) -> str:
         """Generate official NID English translation with real barcode and government format"""
         doc_record = self._create_document_record("nid_english", "NID_English_Translation.pdf")
